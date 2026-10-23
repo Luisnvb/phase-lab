@@ -12,6 +12,22 @@ export function phaseOffset(tA: number, tB: number, period: number): number {
 }
 
 /**
+ * What the phase display shows: B's lead within the cycle and how many full
+ * cycles it has gained (each one a return to unison).
+ */
+export function phaseReadout(
+  posA: number,
+  posB: number,
+  period: number,
+): { offset: number; laps: number } {
+  const lead = posB - posA;
+  // Values a hair below an integer are float noise around an exact landing.
+  const laps = Math.floor(lead / period + 1e-9);
+  const offset = Math.max(0, lead - laps * period);
+  return { offset: offset >= period - 1e-9 ? 0 : offset, laps };
+}
+
+/**
  * Elapsed position of a voice, in steps, at a given time. It interpolates linearly
  * between the last event at or before `time` and the next one (SPEC §4.3), so the
  * event queue stays the single source of truth. Returns null when `time` is not

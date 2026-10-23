@@ -14,25 +14,30 @@ export type FakeClock = {
 export function createFakeClock(tickSeconds = 0.025): FakeClock {
   let time = 0;
   let callback: (() => void) | null = null;
+  let nextTick = 0;
 
   return {
     clock: () => time,
     timer: (cb) => {
       callback = cb;
+      nextTick = time + tickSeconds;
       return () => {
         if (callback === cb) callback = null;
       };
     },
     advance(seconds) {
       const end = time + seconds;
-      while (time + tickSeconds <= end + 1e-9) {
-        time += tickSeconds;
-        callback?.();
+      // Ticks keep their own schedule, independent of how time is advanced.
+      while (callback && nextTick <= end + 1e-9) {
+        time = nextTick;
+        nextTick += tickSeconds;
+        callback();
       }
       time = end;
     },
     jump(seconds) {
       time += seconds;
+      nextTick = time + tickSeconds;
     },
     get timerActive() {
       return callback !== null;

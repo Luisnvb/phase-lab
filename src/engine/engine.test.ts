@@ -2,9 +2,11 @@ import { describe, expect, test } from 'vitest';
 import { DEFAULT_PULSE_DURATION, DEFAULT_RHYTHM } from '../core/defaults.ts';
 import { parseRhythm, rotate } from '../core/pattern.ts';
 import { phaseOffset, positionAt } from '../core/phase.ts';
+import { createPlateauSource } from '../core/plateau.ts';
 import type { Pattern, ScheduledEvent, VoiceConfig, VoiceId } from '../core/types.ts';
-import { createEngine, type EngineOptions } from './engine.ts';
+import { createEngine, type Engine, type EngineOptions } from './engine.ts';
 import { createFakeClock } from './fake-clock.ts';
+import { eventsAround } from './timeline.ts';
 
 function voice(id: VoiceId, pattern: Pattern, pulseDuration: number): VoiceConfig {
   return { id, pattern, pulseDuration, instrument: 'click', gain: 1, pan: 0 };
@@ -100,9 +102,11 @@ describe('continuous phase (module 1 criterion)', () => {
     for (let elapsed = 0; elapsed < totalSeconds; elapsed += 1) {
       fake.advance(1);
       const now = engine.now();
-      const recent = engine.getRecentEvents(now - 1);
+      const recent = eventsAround(engine, now);
       const posA = positionAt(recent, 'A', now, n);
       const posB = positionAt(recent, 'B', now, n);
+      expect(posA).not.toBeNull();
+      expect(posB).not.toBeNull();
       if (posA === null || posB === null) continue;
       // B gains 1 % of A's progress.
       const expected = phaseOffset(0, posA * 0.01, n);
@@ -132,6 +136,87 @@ describe('continuous phase (module 1 criterion)', () => {
     const last = a[a.length - 1]!;
     const index = last.cycleIndex * 12 + last.stepIndex;
     expect(Math.abs(last.time - (0.05 + index * pulse))).toBeLessThan(1e-9);
+  });
+});
+
+describe('plateau phase (module 1 criterion)', () => {
+  const n = DEFAULT_RHYTHM.steps.length;
+  const K = 8;
+
+  /** Samples the displayed offset every 10 ms, as the visualization would. */
+  async function samplePlateaus(
+    seconds: number,
+    onSample?: (elapsed: number, engine: Engine) => void,
+  ) {
+    const { fake, engine } = setup();
+    engine.setVoice(voice('A', DEFAULT_RHYTHM, DEFAULT_PULSE_DURATION));
+    engine.setVoice(voice('B', DEFAULT_RHYTHM, DEFAULT_PULSE_DURATION));
+    engine.setPulseSource(
+      'B',
+      createPlateauSource({ leader: 'A', difference: 0.01, plateauCycles: K, stepsPerCycle: n }),
+    );
+    await engine.start();
+
+    const samples: { time: number; offset: number }[] = [];
+    for (let elapsed = 0; elapsed < seconds; elapsed += 0.01) {
+      fake.advance(0.01);
+      onSample?.(elapsed, engine);
+      const now = engine.now();
+      const recent = eventsAround(engine, now);
+      const posA = positionAt(recent, 'A', now, n);
+      const posB = positionAt(recent, 'B', now, n);
+      if (elapsed > 0.1) expect(posA !== null && posB !== null).toBe(true);
+      if (posA !== null && posB !== null) samples.push({ time: now, offset: posB - posA });
+    }
+    return { engine, samples };
+  }
+
+  /** Time spans during which the offset stays within `tolerance` of the same integer. */
+  function lockedSpans(samples: { time: number; offset: number }[], tolerance: number) {
+    const spans: { offset: number; from: number; to: number }[] = [];
+    for (const { time, offset } of samples) {
+      const nearest = Math.round(offset);
+      const locked = Math.abs(offset - nearest) <= tolerance;
+      const last = spans[spans.length - 1];
+      if (locked && last && last.offset === nearest && last.to >= time - 0.011) last.to = time;
+      else if (locked) spans.push({ offset: nearest, from: time, to: time });
+    }
+    return spans.filter((s) => s.to - s.from > 0.5);
+  }
+
+  test('the offset stops on integer values (±0.02) for K cycles, climbing one step each time', async () => {
+    const cycleSeconds = n * DEFAULT_PULSE_DURATION;
+    // Each round: K cycles locked + ~8.3 cycles drifting at 1 %.
+    const { samples } = await samplePlateaus(4 * (K + 9) * cycleSeconds);
+
+    // Within the SPEC tolerance, and in fact exact (the voices' events coincide).
+    for (const tolerance of [0.02, 1e-6]) {
+      const plateaus = lockedSpans(samples, tolerance);
+      expect(plateaus.map((p) => p.offset).slice(0, 4)).toEqual([0, 1, 2, 3]);
+      for (const plateau of plateaus.slice(0, -1)) {
+        expect(plateau.to - plateau.from).toBeGreaterThanOrEqual(K * cycleSeconds - 0.02);
+      }
+    }
+  });
+
+  test('landing stays exact when the tempo changes during a drift', async () => {
+    const cycleSeconds = n * DEFAULT_PULSE_DURATION;
+    let changed = false;
+    const { samples } = await samplePlateaus(3 * (K + 9) * cycleSeconds, (elapsed, engine) => {
+      // Halfway through the first drift, speed both voices up by 10 %.
+      if (!changed && elapsed > (K + 4) * cycleSeconds) {
+        engine.setPulseDuration('A', DEFAULT_PULSE_DURATION / 1.1);
+        engine.setPulseDuration('B', DEFAULT_PULSE_DURATION / 1.1);
+        changed = true;
+      }
+    });
+    expect(changed).toBe(true);
+
+    const plateaus = lockedSpans(samples, 1e-6);
+    expect(plateaus.map((p) => p.offset).slice(0, 2)).toEqual([0, 1]);
+    // The second plateau runs entirely at the new tempo.
+    const second = plateaus[1]!;
+    expect(second.to - second.from).toBeGreaterThanOrEqual((K * cycleSeconds) / 1.1 - 0.02);
   });
 });
 
@@ -256,6 +341,24 @@ describe('lifecycle', () => {
     // The timeline has no gaps: indices keep counting through the stall.
     const a = ofVoice('A');
     a.slice(1).forEach((e, i) => expect(e.time - a[i]!.time).toBeCloseTo(0.1, 9));
+  });
+
+  test('getNextEvents returns the fixed but unscheduled event of each voice', async () => {
+    const { fake, engine, ofVoice } = setup();
+    expect(engine.getNextEvents()).toEqual([]);
+    engine.setVoice(voice('A', parseRhythm('x.x'), 0.3));
+    await engine.start();
+    fake.advance(0.4);
+
+    const scheduled = ofVoice('A');
+    const last = scheduled[scheduled.length - 1]!;
+    const [next] = engine.getNextEvents();
+    expect(next).toMatchObject({ voice: 'A', stepIndex: last.stepIndex + 1, active: true });
+    expect(next!.time).toBeCloseTo(last.time + 0.3, 9);
+    expect(next!.time).toBeGreaterThan(fake.clock() + 0.1);
+
+    engine.stop();
+    expect(engine.getNextEvents()).toEqual([]);
   });
 
   test('now() subtracts the output latency', () => {

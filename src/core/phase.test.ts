@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { phaseOffset, positionAt } from './phase.ts';
+import { phaseOffset, phaseReadout, positionAt } from './phase.ts';
 import type { ScheduledEvent, VoiceId } from './types.ts';
 
 describe('phaseOffset', () => {
@@ -15,6 +15,20 @@ describe('phaseOffset', () => {
 
   test('rejects non-positive period', () => {
     expect(() => phaseOffset(0, 1, 0)).toThrow(RangeError);
+  });
+});
+
+describe('phaseReadout', () => {
+  test('lead within the cycle and completed laps', () => {
+    expect(phaseReadout(10, 12.37, 12).offset).toBeCloseTo(2.37);
+    expect(phaseReadout(10, 12.37, 12).laps).toBe(0);
+    expect(phaseReadout(1200, 1213.5, 12)).toEqual({ offset: 1.5, laps: 1 });
+  });
+
+  test('a full lap counts once B is exactly one cycle ahead', () => {
+    expect(phaseReadout(1200, 1212, 12)).toEqual({ offset: 0, laps: 1 });
+    expect(phaseReadout(1200, 1212 - 1e-12, 12)).toEqual({ offset: 0, laps: 1 });
+    expect(phaseReadout(1200, 1211.9, 12).laps).toBe(0);
   });
 });
 

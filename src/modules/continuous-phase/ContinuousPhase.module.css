@@ -1,0 +1,53 @@
+.module {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.intro h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.5rem;
+}
+
+.intro p {
+  margin: 0;
+  max-width: 44rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+/* Mobile: visualization, then controls below. ≥ 1024 px: controls on the right. */
+.layout {
+  display: grid;
+  gap: var(--space-8);
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    align-items: start;
+  }
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.secondary {
+  align-self: flex-start;
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-text);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

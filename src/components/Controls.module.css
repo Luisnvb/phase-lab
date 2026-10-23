@@ -1,0 +1,62 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.slider {
+  width: 100%;
+  accent-color: var(--color-text);
+}
+
+.slider:disabled {
+  opacity: 0.4;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+/* Selected state is marked by a thicker border, not only by color. */
+.option:has(input:checked) {
+  border: 2px solid var(--color-text);
+  padding: calc(var(--space-2) - 1px) calc(var(--space-3) - 1px);
+  font-weight: 600;
+}
+
+.option input {
+  accent-color: var(--color-text);
+  margin: 0;
+}

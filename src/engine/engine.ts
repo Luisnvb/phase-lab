@@ -1,5 +1,12 @@
 import { assertInteger, mod } from '../core/math.ts';
-import type { ScheduledEvent, Step, VoiceConfig, VoiceId } from '../core/types.ts';
+import type {
+  PulseContext,
+  PulseSource,
+  ScheduledEvent,
+  Step,
+  VoiceConfig,
+  VoiceId,
+} from '../core/types.ts';
 import { EventQueue } from './event-queue.ts';
 
 // Lookahead scheduler (SPEC §4). Each voice keeps its own clock position and
@@ -21,9 +28,19 @@ export interface Engine {
   stop(): void;
   setVoice(config: VoiceConfig): void;
   setPulseDuration(voice: VoiceId, seconds: number): void;
+  /**
+   * Lets `source` decide each interval of the voice instead of its pulse
+   * duration (e.g. plateau phasing). `null` goes back to the pulse duration.
+   */
+  setPulseSource(voice: VoiceId, source: PulseSource | null): void;
   /** Applied at the start of the voice's next cycle, never mid-cycle. */
   setPatternOffset(voice: VoiceId, steps: number): void;
   getRecentEvents(sinceTime: number): ScheduledEvent[];
+  /**
+   * The next event of each voice: its time is already fixed but it is not in the
+   * queue yet. Needed to interpolate when the pulse is longer than the lookahead.
+   */
+  getNextEvents(): ScheduledEvent[];
   /** Visual time: audio clock minus output latency (SPEC §4.3). */
   now(): number;
   /**
@@ -49,13 +66,21 @@ export type EngineOptions = {
   queueCapacity?: number;
 };
 
+// Event times kept per voice for `timeOf` / `indexAt`.
+const HISTORY_SIZE = 256;
+
 type VoiceState = {
   config: VoiceConfig;
+  source: PulseSource | null;
   nextTime: number;
+  /** Absolute index of the next event to schedule. */
+  index: number;
   stepIndex: number;
   cycleIndex: number;
   patternOffset: number;
   pendingOffset: number | null;
+  /** Times of past events, at `index % HISTORY_SIZE`. */
+  history: Float64Array;
 };
 
 const intervalTimer: Timer = (callback, intervalMs) => {
@@ -108,8 +133,56 @@ export function createEngine(options: EngineOptions): Engine {
     return voice;
   }
 
+  function timeOf(id: VoiceId, index: number): number {
+    const voice = getVoice(id);
+    const oldest = Math.max(0, voice.index - HISTORY_SIZE);
+    if (index >= oldest && index < voice.index) return voice.history[index % HISTORY_SIZE]!;
+    // Not scheduled yet (or forgotten): extrapolate from the next event.
+    return voice.nextTime + (index - voice.index) * voice.config.pulseDuration;
+  }
+
+  function indexAt(id: VoiceId, time: number): number {
+    const voice = getVoice(id);
+    const pulse = voice.config.pulseDuration;
+    let afterIndex = voice.index;
+    let afterTime = voice.nextTime;
+    if (time < afterTime) {
+      const oldest = Math.max(0, voice.index - HISTORY_SIZE);
+      for (let i = voice.index - 1; i >= oldest; i--) {
+        const t = voice.history[i % HISTORY_SIZE]!;
+        if (t <= time) return i + (time - t) / (afterTime - t);
+        afterIndex = i;
+        afterTime = t;
+      }
+    }
+    return afterIndex + (time - afterTime) / pulse;
+  }
+
+  const pulseContext = (time: number, index: number): PulseContext => ({
+    time,
+    index,
+    timeOf,
+    indexAt,
+    pulseOf: (id) => getVoice(id).config.pulseDuration,
+  });
+
   function emit(name: EngineEventName, event: ScheduledEvent): void {
     for (const callback of listeners[name]) callback(event);
+  }
+
+  function currentStep(voice: VoiceState, offset: number): Step {
+    const { steps } = voice.config.pattern;
+    return steps[mod(voice.stepIndex + offset, steps.length)]!;
+  }
+
+  function eventFor(voice: VoiceState, step: Step): ScheduledEvent {
+    return {
+      voice: voice.config.id,
+      stepIndex: voice.stepIndex,
+      cycleIndex: voice.cycleIndex,
+      time: voice.nextTime,
+      active: step.active,
+    };
   }
 
   function scheduleNext(voice: VoiceState, currentTime: number): void {
@@ -118,25 +191,25 @@ export function createEngine(options: EngineOptions): Engine {
       voice.pendingOffset = null;
     }
 
-    const { steps } = voice.config.pattern;
-    const step = steps[mod(voice.stepIndex + voice.patternOffset, steps.length)]!;
-    const event: ScheduledEvent = {
-      voice: voice.config.id,
-      stepIndex: voice.stepIndex,
-      cycleIndex: voice.cycleIndex,
-      time: voice.nextTime,
-      active: step.active,
-    };
+    const step = currentStep(voice, voice.patternOffset);
+    const event = eventFor(voice, step);
 
     queue.push(event);
+    voice.history[voice.index % HISTORY_SIZE] = event.time;
     // An event that is already late (e.g. the timer was throttled in a background
     // tab) is skipped by the audio but kept in the timeline.
     if (event.active && event.time >= currentTime) play?.(event, step, voice.config);
     if (event.stepIndex === 0) emit('cycle', event);
     emit('step', event);
 
+    const interval = voice.source
+      ? voice.source.next(pulseContext(event.time, voice.index))
+      : voice.config.pulseDuration;
+    validatePulseDuration(interval);
+
     // Always advance from nextTime, so tempo changes never accumulate drift (SPEC §10).
-    voice.nextTime += voice.config.pulseDuration;
+    voice.nextTime += interval;
+    voice.index++;
     voice.stepIndex++;
     if (voice.stepIndex >= voice.config.pattern.steps.length) {
       voice.stepIndex = 0;
@@ -147,15 +220,26 @@ export function createEngine(options: EngineOptions): Engine {
   function tick(): void {
     const currentTime = clock();
     const horizon = currentTime + lookahead;
-    for (const voice of voices.values()) {
-      while (voice.nextTime < horizon) scheduleNext(voice, currentTime);
+    // Schedule all voices in chronological order, so a pulse source always sees
+    // the other voices scheduled up to its own time. Ties go to the voice added first.
+    for (;;) {
+      let earliest: VoiceState | null = null;
+      for (const voice of voices.values()) {
+        if (voice.nextTime < horizon && (!earliest || voice.nextTime < earliest.nextTime)) {
+          earliest = voice;
+        }
+      }
+      if (!earliest) return;
+      scheduleNext(earliest, currentTime);
     }
   }
 
   function resetTimeline(voice: VoiceState): void {
+    voice.index = 0;
     voice.stepIndex = 0;
     voice.cycleIndex = 0;
     voice.nextTime = 0;
+    voice.source?.reset?.();
     if (voice.pendingOffset !== null) {
       voice.patternOffset = voice.pendingOffset;
       voice.pendingOffset = null;
@@ -198,11 +282,14 @@ export function createEngine(options: EngineOptions): Engine {
       }
       voices.set(config.id, {
         config,
+        source: null,
         nextTime: running ? clock() + startDelay : 0,
+        index: 0,
         stepIndex: 0,
         cycleIndex: 0,
         patternOffset: 0,
         pendingOffset: null,
+        history: new Float64Array(HISTORY_SIZE),
       });
     },
 
@@ -210,6 +297,10 @@ export function createEngine(options: EngineOptions): Engine {
       validatePulseDuration(seconds);
       const voice = getVoice(id);
       voice.config = { ...voice.config, pulseDuration: seconds };
+    },
+
+    setPulseSource(id, source) {
+      getVoice(id).source = source;
     },
 
     setPatternOffset(id, steps) {
@@ -229,6 +320,17 @@ export function createEngine(options: EngineOptions): Engine {
         .toArray()
         .filter((event) => event.time >= sinceTime)
         .sort((a, b) => a.time - b.time);
+    },
+
+    getNextEvents() {
+      if (!running) return [];
+      return [...voices.values()].map((voice) => {
+        const offset =
+          voice.stepIndex === 0 && voice.pendingOffset !== null
+            ? voice.pendingOffset
+            : voice.patternOffset;
+        return eventFor(voice, currentStep(voice, offset));
+      });
     },
 
     now() {
