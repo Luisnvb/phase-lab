@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Choice, Slider } from '../../components/Controls.tsx';
+import { Checkbox, Choice, Slider } from '../../components/Controls.tsx';
 import { PhaseRings } from '../../components/PhaseRings.tsx';
 import { Transport } from '../../components/Transport.tsx';
 import type { AudioRuntime } from '../../engine/audio-runtime.ts';
@@ -37,6 +37,7 @@ function applyVoices(runtime: AudioRuntime, settings: ContinuousPhaseSettings): 
 
 export default function ContinuousPhase() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [showResultant, setShowResultant] = useState(false);
   const settingsRef = useRef(settings);
   useEffect(() => {
     settingsRef.current = settings;
@@ -82,7 +83,11 @@ export default function ContinuousPhase() {
 
       <div className={styles.layout}>
         <div className={styles.visual}>
-          <PhaseRings engine={runtime?.engine ?? null} pattern={patternFor(material)} />
+          <PhaseRings
+            engine={runtime?.engine ?? null}
+            pattern={patternFor(material)}
+            showResultant={showResultant}
+          />
         </div>
 
         <section className={styles.controls} aria-label="Controles">
@@ -119,6 +124,11 @@ export default function ContinuousPhase() {
             value={material}
             options={MATERIAL_OPTIONS}
             onChange={(value) => update('material', value)}
+          />
+          <Checkbox
+            label="Mostrar resultante"
+            checked={showResultant}
+            onChange={setShowResultant}
           />
           <button
             type="button"

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { phaseReadout, positionAt } from '../core/phase.ts';
+import { nearestStage, phaseReadout, positionAt } from '../core/phase.ts';
+import { stageMatrix } from '../core/resultant.ts';
 import type { Pattern } from '../core/types.ts';
 import type { Engine } from '../engine/engine.ts';
 import { eventsAround } from '../engine/timeline.ts';
@@ -10,6 +11,8 @@ import styles from './PhaseRings.module.css';
 type Props = {
   engine: Engine | null;
   pattern: Pattern;
+  /** Adds an outer ring with the resultant at the nearest whole-step offset. */
+  showResultant?: boolean;
 };
 
 const stepsFormat = new Intl.NumberFormat('es-ES', {
@@ -33,7 +36,7 @@ function readColors(element: Element): RingColors {
  * Phase rings for two voices. Every frame, positions come from the engine's
  * event queue at `engine.now()` (SPEC §4.3); nothing is timed here.
  */
-export function PhaseRings({ engine, pattern }: Props) {
+export function PhaseRings({ engine, pattern, showResultant = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const offsetRef = useRef<HTMLSpanElement>(null);
   const lapsRef = useRef<HTMLSpanElement>(null);
@@ -45,6 +48,8 @@ export function PhaseRings({ engine, pattern }: Props) {
     if (!canvas || !ctx) return;
 
     const n = pattern.steps.length;
+    // Resultant for every whole-step offset, computed once per pattern.
+    const resultants = showResultant ? stageMatrix(pattern) : null;
     let colors = readColors(canvas);
     let size = 0;
     let lastOffsetText = '';
@@ -81,7 +86,21 @@ export function PhaseRings({ engine, pattern }: Props) {
       const { offset, laps } = phaseReadout(posA, posB, n);
       const offsetText = stepsFormat.format(offset);
 
-      drawPhaseRings(ctx, size, { steps: pattern.steps, posA, posB, offsetText, discrete: reducedMotion, colors });
+      let resultant;
+      if (resultants) {
+        const { stage, distance } = nearestStage(posB - posA, n);
+        resultant = { cells: resultants[stage]!, clarity: 1 - distance / 0.5 };
+      }
+
+      drawPhaseRings(ctx, size, {
+        steps: pattern.steps,
+        posA,
+        posB,
+        offsetText,
+        discrete: reducedMotion,
+        colors,
+        ...(resultant && { resultant }),
+      });
 
       if (offsetText !== lastOffsetText && offsetRef.current) {
         offsetRef.current.textContent = `${offsetText} ${offsetText === '1,00' ? 'paso' : 'pasos'}`;
@@ -100,7 +119,7 @@ export function PhaseRings({ engine, pattern }: Props) {
       observer.disconnect();
       scheme.removeEventListener('change', onSchemeChange);
     };
-  }, [engine, pattern, reducedMotion]);
+  }, [engine, pattern, reducedMotion, showResultant]);
 
   return (
     <figure className={styles.figure}>

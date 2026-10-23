@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Checkbox, Choice, Slider } from '../../components/Controls.tsx';
 import { PatternEditor } from '../../components/PatternEditor.tsx';
-import { moveStageCursor } from '../../components/stage-matrix-geometry.ts';
+import { moveColumnCursor, moveStageCursor } from '../../components/stage-matrix-geometry.ts';
 import { StageMatrix } from '../../components/StageMatrix.tsx';
 import { Transport } from '../../components/Transport.tsx';
+import { VoiceRows } from '../../components/VoiceRows.tsx';
 import { positionAt } from '../../core/phase.ts';
 import { stageMatrix } from '../../core/resultant.ts';
 import {
@@ -49,7 +50,15 @@ export default function SteppedPhase() {
   const [stageInfo, setStageInfo] = useState<StageInfo | null>(null);
   const stageInfoRef = useRef<StageInfo | null>(null);
   const cursorRef = useRef<SVGRectElement>(null);
+  const rowsCursorRef = useRef<SVGRectElement>(null);
   const reducedMotion = useReducedMotion();
+
+  const [showResultant, setShowResultant] = useState(false);
+  const [soloResultant, setSoloResultant] = useState(false);
+  const soloResultantRef = useRef(soloResultant);
+  useEffect(() => {
+    soloResultantRef.current = soloResultant;
+  }, [soloResultant]);
 
   const showStage = useCallback((info: StageInfo | null) => {
     const shown = stageInfoRef.current;
@@ -63,6 +72,7 @@ export default function SteppedPhase() {
     (runtime: AudioRuntime) => {
       const current = settingsRef.current;
       applyVoices(runtime, current);
+      runtime.setSoloResultant(soloResultantRef.current);
       detachRef.current?.();
       const process = createSteppedProcess({
         steps: current.pattern.steps.length,
@@ -81,6 +91,10 @@ export default function SteppedPhase() {
   useEffect(() => {
     if (runtime) applyVoices(runtime, settings);
   }, [runtime, settings]);
+
+  useEffect(() => {
+    runtime?.setSoloResultant(soloResultant);
+  }, [runtime, soloResultant]);
 
   const { repetitions, auto, loop, pattern } = settings;
   useEffect(() => {
@@ -111,8 +125,9 @@ export default function SteppedPhase() {
     const cycle = Math.floor(position / n + 1e-9);
     const info = process.stageAt(cycle);
     if (!info) return;
-    const step = position - cycle * n;
-    moveStageCursor(cursorRef.current, info.stage, reducedMotion ? Math.floor(step) : step);
+    const step = reducedMotion ? Math.floor(position - cycle * n) : position - cycle * n;
+    moveStageCursor(cursorRef.current, info.stage, step);
+    moveColumnCursor(rowsCursorRef.current, step);
     showStage(info);
   });
 
@@ -144,6 +159,12 @@ export default function SteppedPhase() {
       <div className={styles.layout}>
         <div className={styles.visual}>
           <p className={styles.indicator}>{indicator}</p>
+          <VoiceRows
+            pattern={pattern}
+            stage={stageInfo?.stage ?? 0}
+            showResultant={showResultant}
+            cursorRef={rowsCursorRef}
+          />
           <StageMatrix
             matrix={matrix}
             currentStage={running || status === 'ended' ? (stageInfo?.stage ?? 0) : null}
@@ -190,6 +211,19 @@ export default function SteppedPhase() {
             disabled={!running}
           >
             Siguiente etapa
+          </button>
+          <Checkbox
+            label="Mostrar resultante"
+            checked={showResultant}
+            onChange={setShowResultant}
+          />
+          <button
+            type="button"
+            className={styles.secondary}
+            aria-pressed={soloResultant}
+            onClick={() => setSoloResultant((value) => !value)}
+          >
+            {soloResultant ? 'Volver a escuchar A y B' : 'Escuchar solo la resultante'}
           </button>
         </section>
       </div>

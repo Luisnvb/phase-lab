@@ -60,6 +60,13 @@
   cursor: pointer;
 }
 
+/* Pressed toggle: filled and bold, not only a color change. */
+.secondary[aria-pressed='true'] {
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-weight: 600;
+}
+
 .secondary:disabled {
   opacity: 0.4;
   cursor: not-allowed;

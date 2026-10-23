@@ -8,6 +8,11 @@ export type AudioRuntime = {
   readonly engine: Engine;
   /** Updates the engine and the voice's instrument, panning and gain. */
   setVoice(config: VoiceConfig): void;
+  /**
+   * Routes every note of A and B to a single centred instrument with its own
+   * timbre, so only the combination is heard. Coinciding notes add up (accent).
+   */
+  setSoloResultant(enabled: boolean): void;
   pause(): Promise<void>;
   resume(): Promise<void>;
   /** Stops the engine, frees the audio nodes and closes the context (SPEC §4.4). */
@@ -37,6 +42,8 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
   await resumed;
 
   const channels = new Map<VoiceId, Channel>();
+  let resultantChannel: Channel | null = null;
+  let soloResultant = false;
 
   const engine = createEngine({
     clock: () => context.currentTime,
@@ -44,17 +51,18 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
     outputLatency: () => context.outputLatency || context.baseLatency || 0,
     resume: () => context.resume(),
     play: (event, step, voice) => {
+      const channel = soloResultant ? resultantChannel : channels.get(voice.id);
       // Notes ring for most of the step, so fast tempos do not pile up voices.
-      channels.get(voice.id)?.instrument.play(event.time, step, voice.pulseDuration * 0.9);
+      channel?.instrument.play(event.time, step, voice.pulseDuration * 0.9);
     },
   });
 
-  function createChannel(config: VoiceConfig): Channel {
-    const gain = new T.Gain(config.gain).toDestination();
-    const panner = new T.Panner(config.pan).connect(gain);
-    const instrument = createInstrument(T, config.instrument);
+  function createChannel(instrumentId: InstrumentId, gainValue: number, pan: number): Channel {
+    const gain = new T.Gain(gainValue).toDestination();
+    const panner = new T.Panner(pan).connect(gain);
+    const instrument = createInstrument(T, instrumentId);
     instrument.output.connect(panner);
-    return { instrumentId: config.instrument, instrument, panner, gain };
+    return { instrumentId, instrument, panner, gain };
   }
 
   function disposeChannel(channel: Channel): void {
@@ -70,7 +78,7 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
       engine.setVoice(config);
       const channel = channels.get(config.id);
       if (!channel) {
-        channels.set(config.id, createChannel(config));
+        channels.set(config.id, createChannel(config.instrument, config.gain, config.pan));
         return;
       }
       if (channel.instrumentId !== config.instrument) {
@@ -83,6 +91,12 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
       channel.gain.gain.rampTo(config.gain, 0.05);
     },
 
+    setSoloResultant(enabled) {
+      // Takes effect from the next scheduled note; notes already scheduled keep their channel.
+      if (enabled && !resultantChannel) resultantChannel = createChannel('pianoish', 0.7, 0);
+      soloResultant = enabled;
+    },
+
     pause: () => context.suspend(),
     resume: () => context.resume(),
 
@@ -90,6 +104,8 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
       engine.stop();
       for (const channel of channels.values()) disposeChannel(channel);
       channels.clear();
+      if (resultantChannel) disposeChannel(resultantChannel);
+      resultantChannel = null;
       // Tone's wrapper closes the AudioContext; dispose() then stops its own ticker.
       await toneContext.close();
       toneContext.dispose();

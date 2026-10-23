@@ -28,6 +28,16 @@ export function phaseReadout(
 }
 
 /**
+ * Nearest whole-step offset (0..period-1) to a fractional one, and how far it
+ * is (0..0.5). With continuous phasing the resultant is only exact when the
+ * distance is 0; in between, the nearest stage is the closest approximation.
+ */
+export function nearestStage(offset: number, period: number): { stage: number; distance: number } {
+  const rounded = Math.round(offset);
+  return { stage: mod(rounded, period), distance: Math.abs(offset - rounded) };
+}
+
+/**
  * Elapsed position of a voice, in steps, at a given time. It interpolates linearly
  * between the last event at or before `time` and the next one (SPEC §4.3), so the
  * event queue stays the single source of truth. Returns null when `time` is not

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { phaseOffset, phaseReadout, positionAt } from './phase.ts';
+import { nearestStage, phaseOffset, phaseReadout, positionAt } from './phase.ts';
 import type { ScheduledEvent, VoiceId } from './types.ts';
 
 describe('phaseOffset', () => {
@@ -29,6 +29,15 @@ describe('phaseReadout', () => {
     expect(phaseReadout(1200, 1212, 12)).toEqual({ offset: 0, laps: 1 });
     expect(phaseReadout(1200, 1212 - 1e-12, 12)).toEqual({ offset: 0, laps: 1 });
     expect(phaseReadout(1200, 1211.9, 12).laps).toBe(0);
+  });
+});
+
+describe('nearestStage', () => {
+  test('rounds to the closest whole step, within the cycle', () => {
+    expect(nearestStage(2.3, 12)).toEqual({ stage: 2, distance: expect.closeTo(0.3) });
+    expect(nearestStage(2.7, 12)).toEqual({ stage: 3, distance: expect.closeTo(0.3) });
+    expect(nearestStage(11.8, 12)).toEqual({ stage: 0, distance: expect.closeTo(0.2) });
+    expect(nearestStage(5, 12)).toEqual({ stage: 5, distance: 0 });
   });
 });
 
