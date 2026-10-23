@@ -54,6 +54,33 @@
   stroke-width: 2;
 }
 
+.bFill {
+  fill: var(--color-voice-b);
+}
+
+/* A beat of the target not substituted yet: dashed outline, not only grey. */
+.pending {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.turn {
+  fill: var(--color-text-muted);
+  font-size: 9px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+
+.groupBox {
+  fill: var(--color-text);
+  fill-opacity: 0.04;
+  stroke: var(--color-border);
+  stroke-width: 1.5;
+}
+
 .none {
   fill: var(--color-text-muted);
 }

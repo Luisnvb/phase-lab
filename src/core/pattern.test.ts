@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { DEFAULT_MELODY, DEFAULT_RHYTHM, DEFAULT_STEP_COUNT } from './defaults.ts';
-import { activeIndices, melodicPattern, parseRhythm, rotate } from './pattern.ts';
+import { activeIndices, melodicPattern, parseRhythm, rotate, toggleStep } from './pattern.ts';
 import type { Pattern } from './types.ts';
 
 const toString = (p: Pattern) => p.steps.map((s) => (s.active ? 'x' : '.')).join('');
@@ -53,6 +53,15 @@ describe('parseRhythm', () => {
 
   test('rejects unknown characters', () => {
     expect(() => parseRhythm('x o x')).toThrow(SyntaxError);
+  });
+});
+
+describe('toggleStep', () => {
+  test('flips one step without mutating the pattern', () => {
+    const pattern = parseRhythm('x..x');
+    const toggled = toggleStep(pattern, 1);
+    expect(toString(toggled)).toBe('xx.x');
+    expect(toString(pattern)).toBe('x..x');
   });
 });
 

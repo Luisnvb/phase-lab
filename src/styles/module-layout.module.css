@@ -42,6 +42,33 @@
   font-variant-numeric: tabular-nums;
 }
 
+.legend {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.picker .legend {
+  text-align: left;
+}
+
 .controls {
   display: flex;
   flex-direction: column;

@@ -8,6 +8,8 @@ export type AudioRuntime = {
   readonly engine: Engine;
   /** Updates the engine and the voice's instrument, panning and gain. */
   setVoice(config: VoiceConfig): void;
+  /** Changes only a voice's gain and panning, leaving its pattern and timing alone. */
+  setMix(voice: VoiceId, gain: number, pan: number): void;
   /**
    * Routes every note of A and B to a single centred instrument with its own
    * timbre, so only the combination is heard. Coinciding notes add up (accent).
@@ -103,6 +105,12 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
       }
       channel.panner.pan.rampTo(config.pan, 0.05);
       channel.gain.gain.rampTo(config.gain, 0.05);
+    },
+
+    setMix(voice, gain, pan) {
+      const channel = channels.get(voice);
+      channel?.gain.gain.rampTo(gain, 0.05);
+      channel?.panner.pan.rampTo(pan, 0.05);
     },
 
     setSoloResultant(enabled) {

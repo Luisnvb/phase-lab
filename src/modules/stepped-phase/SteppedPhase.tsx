@@ -5,6 +5,7 @@ import { moveColumnCursor, moveStageCursor } from '../../components/stage-matrix
 import { StageMatrix } from '../../components/StageMatrix.tsx';
 import { Transport } from '../../components/Transport.tsx';
 import { VoiceRows } from '../../components/VoiceRows.tsx';
+import { toggleStep } from '../../core/pattern.ts';
 import { positionAt } from '../../core/phase.ts';
 import { stageMatrix } from '../../core/resultant.ts';
 import {
@@ -22,7 +23,6 @@ import { driveSteppedProcess } from './process-driver.ts';
 import {
   DEFAULT_SETTINGS,
   LIMITS,
-  toggleStep,
   voiceConfigs,
   type SteppedPhaseSettings,
 } from './settings.ts';

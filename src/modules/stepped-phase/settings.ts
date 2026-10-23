@@ -36,10 +36,3 @@ export function voiceConfigs(settings: SteppedPhaseSettings): [VoiceConfig, Voic
     { id: 'B', pattern, pulseDuration: pulse, instrument: 'click', gain: 0.8, pan: PAN },
   ];
 }
-
-/** Toggles one step of a pattern, returning a new pattern. */
-export function toggleStep(pattern: Pattern, index: number): Pattern {
-  return {
-    steps: pattern.steps.map((step, i) => (i === index ? { ...step, active: !step.active } : step)),
-  };
-}

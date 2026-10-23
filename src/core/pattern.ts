@@ -40,3 +40,10 @@ export function activeIndices(pattern: Pattern): number[] {
   });
   return indices;
 }
+
+/** Toggles one step of a pattern, returning a new pattern. */
+export function toggleStep(pattern: Pattern, index: number): Pattern {
+  return {
+    steps: pattern.steps.map((step, i) => (i === index ? { ...step, active: !step.active } : step)),
+  };
+}

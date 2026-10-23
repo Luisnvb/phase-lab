@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { accentsFor } from './accents.ts';
+import { accentPattern, accentsFor } from './accents.ts';
+import { parseRhythm } from './pattern.ts';
 
 describe('accentsFor', () => {
   test.each([
@@ -23,5 +24,22 @@ describe('accentsFor', () => {
     expect(() => accentsFor(12, 0)).toThrow(RangeError);
     expect(() => accentsFor(12, 1.5)).toThrow(RangeError);
     expect(() => accentsFor(-1, 3)).toThrow(RangeError);
+  });
+});
+
+describe('accentPattern', () => {
+  const pattern = parseRhythm('xx.xxxxxxxxx');
+
+  test('accents the first step of each group', () => {
+    const velocities = accentPattern(pattern, 4).steps.map((s) => s.velocity);
+    expect(velocities).toEqual([1, 0.35, 0.35, 0.35, 1, 0.35, 0.35, 0.35, 1, 0.35, 0.35, 0.35]);
+  });
+
+  test('never changes which steps sound, for any grouping', () => {
+    for (const size of [2, 3, 4, 6]) {
+      expect(accentPattern(pattern, size).steps.map((s) => s.active)).toEqual(
+        pattern.steps.map((s) => s.active),
+      );
+    }
   });
 });

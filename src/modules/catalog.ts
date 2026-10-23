@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react';
 import ContinuousPhase from './continuous-phase/ContinuousPhase.tsx';
+import MetricAmbiguity from './metric-ambiguity/MetricAmbiguity.tsx';
 import SteppedPhase from './stepped-phase/SteppedPhase.tsx';
+import Substitution from './substitution/Substitution.tsx';
 
 export type ModuleEntry = {
   route: string;
@@ -30,11 +32,13 @@ export const MODULES: readonly ModuleEntry[] = [
     route: 'sustitucion',
     title: 'Construcción por sustitución',
     summary: 'Un patrón aparece golpe a golpe, cambiando silencios por notas.',
+    Component: Substitution,
   },
   {
     route: 'ambiguedad-metrica',
     title: 'Ambigüedad 3 contra 2',
     summary: 'El mismo ciclo de 12 pulsos se oye en grupos de tres o de dos según dónde caen los acentos.',
+    Component: MetricAmbiguity,
   },
   {
     route: 'aumentacion',
