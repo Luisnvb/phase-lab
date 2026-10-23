@@ -1,0 +1,18 @@
+.app {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.title {
+  margin: 0 0 var(--space-3);
+  font-size: 2rem;
+  letter-spacing: -0.01em;
+}
+
+.lead {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
