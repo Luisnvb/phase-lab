@@ -25,8 +25,19 @@ export default tseslint.config(
   {
     // src/core must stay free of browser dependencies (CLAUDE.md).
     files: ['src/core/**/*.ts'],
-    languageOptions: {
-      globals: {},
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...[
+          'window',
+          'document',
+          'navigator',
+          'AudioContext',
+          'requestAnimationFrame',
+          'setTimeout',
+          'setInterval',
+        ].map((name) => ({ name, message: 'src/core must not depend on browser APIs.' })),
+      ],
     },
   },
 );
