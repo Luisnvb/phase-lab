@@ -69,6 +69,13 @@ describe('defaults', () => {
   });
 
   test('default rhythm matches SPEC §8', () => {
-    expect(toString(DEFAULT_RHYTHM)).toBe('xx.x..xx.x..');
+    expect(toString(DEFAULT_RHYTHM)).toBe('xx.x..x.xx..');
+  });
+
+  test('default rhythm has no rotational symmetry', () => {
+    const rotations = new Set(
+      Array.from({ length: DEFAULT_STEP_COUNT }, (_, k) => toString(rotate(DEFAULT_RHYTHM, k))),
+    );
+    expect(rotations.size).toBe(DEFAULT_STEP_COUNT);
   });
 });

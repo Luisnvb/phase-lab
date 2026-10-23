@@ -241,7 +241,7 @@ src/
 
 - No incluir grabaciones, partituras ni patrones transcritos de obras de Reich.
 - Patrones por defecto originales. Propuestas iniciales:
-  - Rítmico de 12 pasos: `x x . x . . x x . x . .`
+  - Rítmico de 12 pasos: `x x . x . . x . x x . .` (sin simetría rotacional: las 12 etapas del desfase por saltos son distintas)
   - Melódico de 12 notas (re dórico): `D4 A4 E5 A4 F5 E5 D5 A4 C5 E5 G4 A4`
 - Los textos explicativos pueden mencionar obras como referencia de escucha (título y año), sin reproducir material.
 

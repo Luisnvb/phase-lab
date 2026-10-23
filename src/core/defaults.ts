@@ -3,7 +3,8 @@ import { melodicPattern, parseRhythm } from './pattern.ts';
 
 export const DEFAULT_STEP_COUNT = 12;
 
-export const DEFAULT_RHYTHM = parseRhythm('x x . x . . x x . x . .');
+/** No rotational symmetry: all 12 stages of stepped phasing are different. */
+export const DEFAULT_RHYTHM = parseRhythm('x x . x . . x . x x . .');
 
 /** 12 notes in D Dorian. */
 export const DEFAULT_MELODY = melodicPattern(
