@@ -1,25 +1,30 @@
-import type { ComponentType } from 'react';
+import { useEffect } from 'react';
 import styles from './App.module.css';
-import ContinuousPhase from './modules/continuous-phase/ContinuousPhase.tsx';
-import SteppedPhase from './modules/stepped-phase/SteppedPhase.tsx';
+import { Home } from './components/Home.tsx';
+import { MODULES } from './modules/catalog.ts';
 import { useHashRoute } from './state/use-hash-route.ts';
 
-const MODULES: readonly { route: string; title: string; Component: ComponentType }[] = [
-  { route: 'desfase-continuo', title: 'Desfase continuo', Component: ContinuousPhase },
-  { route: 'desfase-por-saltos', title: 'Desfase por saltos', Component: SteppedPhase },
-];
+const AVAILABLE = MODULES.filter((module) => module.Component);
 
 export default function App() {
   const route = useHashRoute();
-  const current = MODULES.find((module) => module.route === route) ?? MODULES[0]!;
+  const current = AVAILABLE.find((module) => module.route === route);
+
+  useEffect(() => {
+    document.title = current ? `${current.title} · Procesos` : 'Procesos';
+  }, [current]);
 
   return (
     <main className={styles.app}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Procesos</h1>
+        <h1 className={styles.title}>
+          <a href="#/" className={styles.home}>
+            Procesos
+          </a>
+        </h1>
         <nav aria-label="Módulos">
           <ul className={styles.nav}>
-            {MODULES.map((module) => (
+            {AVAILABLE.map((module) => (
               <li key={module.route}>
                 <a
                   href={`#/${module.route}`}
@@ -33,8 +38,12 @@ export default function App() {
           </ul>
         </nav>
       </header>
-      {/* The key remounts on change: the previous module stops and frees its audio. */}
-      <current.Component key={current.route} />
+      {current?.Component ? (
+        // The key remounts on change: the previous module stops and frees its audio.
+        <current.Component key={current.route} />
+      ) : (
+        <Home modules={MODULES} />
+      )}
     </main>
   );
 }

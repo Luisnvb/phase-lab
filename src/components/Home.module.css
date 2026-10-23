@@ -1,0 +1,86 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+}
+
+.lead {
+  margin: 0;
+  max-width: 44rem;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cards li {
+  display: flex;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+a.card:hover {
+  border-color: var(--color-text);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.summary {
+  margin: 0;
+  flex: 1;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.action {
+  font-weight: 600;
+}
+
+/* Not available yet: dashed border and a text badge, not only a lighter color. */
+.upcoming {
+  border-style: dashed;
+  background: transparent;
+}
+
+.upcoming .cardTitle {
+  color: var(--color-text-muted);
+}
+
+.badge {
+  align-self: flex-start;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.note {
+  margin: 0;
+  max-width: 44rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}

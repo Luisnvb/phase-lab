@@ -68,6 +68,10 @@ export function useAudioRuntime(configure: (runtime: AudioRuntime) => void) {
           return;
         }
         runtimeRef.current = created;
+        created.onSystemStateChange((running) => {
+          if (!running && statusRef.current === 'playing') updateStatus('paused');
+          if (running && statusRef.current === 'paused') updateStatus('playing');
+        });
         configureRef.current(created);
         await created.engine.start();
         setRuntime(created);

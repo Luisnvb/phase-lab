@@ -159,11 +159,16 @@ export default function SteppedPhase() {
       <div className={styles.layout}>
         <div className={styles.visual}>
           <p className={styles.indicator}>{indicator}</p>
+          {/* Only the stage is announced: repetitions would be too frequent. */}
+          <span className="visually-hidden" role="status">
+            {status === 'ended' ? '' : stageInfo ? `Etapa ${stageInfo.stage}` : ''}
+          </span>
           <VoiceRows
             pattern={pattern}
             stage={stageInfo?.stage ?? 0}
             showResultant={showResultant}
             cursorRef={rowsCursorRef}
+            showCursor={running}
           />
           <StageMatrix
             matrix={matrix}

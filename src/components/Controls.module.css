@@ -21,6 +21,9 @@
 
 .slider {
   width: 100%;
+  /* Taller touch area; the track itself stays thin. */
+  min-height: 2.75rem;
+  margin: 0;
   accent-color: var(--color-text);
 }
 
@@ -41,6 +44,7 @@
 
 .option {
   align-self: flex-start;
+  min-height: 2.75rem;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);

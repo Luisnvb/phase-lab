@@ -15,6 +15,15 @@ const LABELS: Record<PlaybackStatus, string> = {
   ended: 'Empezar de nuevo',
 };
 
+/** Announced to screen readers when the state changes, e.g. with the space bar. */
+const ANNOUNCEMENTS: Record<PlaybackStatus, string> = {
+  idle: '',
+  loading: 'Cargando el sonido',
+  playing: 'Reproduciendo',
+  paused: 'En pausa',
+  ended: 'Proceso terminado',
+};
+
 /** Elements where the space bar already means something. */
 function handlesSpace(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -51,6 +60,9 @@ export function Transport({ status, onToggle }: Props) {
         {LABELS[status]}
       </button>
       <span className={styles.hint}>Barra espaciadora: reproducir / pausar</span>
+      <span className="visually-hidden" role="status">
+        {ANNOUNCEMENTS[status]}
+      </span>
     </div>
   );
 }

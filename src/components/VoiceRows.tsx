@@ -14,10 +14,11 @@ type Props = {
   showResultant: boolean;
   /** Step cursor, moved by the caller with `moveColumnCursor` (stage-matrix-geometry). */
   cursorRef: Ref<SVGRectElement>;
+  showCursor: boolean;
 };
 
 /** What each voice plays at the current stage, step by step, aligned with A. */
-export function VoiceRows({ pattern, stage, showResultant, cursorRef }: Props) {
+export function VoiceRows({ pattern, stage, showResultant, cursorRef, showCursor }: Props) {
   const shifted = rotate(pattern, stage);
   const rows: { label: string; cells: ResultantCell[] }[] = [
     { label: 'A', cells: pattern.steps.map((s) => (s.active ? 'A' : 'none')) },
@@ -62,6 +63,7 @@ export function VoiceRows({ pattern, stage, showResultant, cursorRef }: Props) {
         height={height}
         rx={4}
         className={styles.cursor}
+        visibility={showCursor ? 'visible' : 'hidden'}
       />
     </svg>
   );

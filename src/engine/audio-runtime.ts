@@ -15,6 +15,11 @@ export type AudioRuntime = {
   setSoloResultant(enabled: boolean): void;
   pause(): Promise<void>;
   resume(): Promise<void>;
+  /**
+   * Called when the system stops or restarts the audio on its own (iOS: a call,
+   * another app, the page going to the background), so the UI can follow.
+   */
+  onSystemStateChange(callback: (running: boolean) => void): () => void;
   /** Stops the engine, frees the audio nodes and closes the context (SPEC §4.4). */
   dispose(): Promise<void>;
 };
@@ -32,6 +37,10 @@ type Channel = {
  * browsers with strict autoplay rules (iOS Safari) accept it.
  */
 export async function createAudioRuntime(): Promise<AudioRuntime> {
+  // iOS: play through the ring/silent switch, like a media app (Safari 16.4+).
+  const audioSession = (navigator as { audioSession?: { type: string } }).audioSession;
+  if (audioSession) audioSession.type = 'playback';
+
   const context = new AudioContext({ latencyHint: 'interactive' });
   const resumed = context.resume();
 
@@ -44,12 +53,17 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
   const channels = new Map<VoiceId, Channel>();
   let resultantChannel: Channel | null = null;
   let soloResultant = false;
+  // Set while we suspend the context ourselves, to tell it apart from interruptions.
+  let pausedByUser = false;
 
   const engine = createEngine({
     clock: () => context.currentTime,
     // outputLatency is missing in some browsers (Safari).
     outputLatency: () => context.outputLatency || context.baseLatency || 0,
-    resume: () => context.resume(),
+    resume: () => {
+      pausedByUser = false;
+      return context.resume();
+    },
     play: (event, step, voice) => {
       const channel = soloResultant ? resultantChannel : channels.get(voice.id);
       // Notes ring for most of the step, so fast tempos do not pile up voices.
@@ -97,8 +111,25 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
       soloResultant = enabled;
     },
 
-    pause: () => context.suspend(),
-    resume: () => context.resume(),
+    pause() {
+      pausedByUser = true;
+      return context.suspend();
+    },
+
+    resume() {
+      pausedByUser = false;
+      return context.resume();
+    },
+
+    onSystemStateChange(callback) {
+      // Besides 'suspended', Safari uses an 'interrupted' state.
+      const onStateChange = () => {
+        if (context.state === 'closed' || pausedByUser) return;
+        callback(context.state === 'running');
+      };
+      context.addEventListener('statechange', onStateChange);
+      return () => context.removeEventListener('statechange', onStateChange);
+    },
 
     async dispose() {
       engine.stop();

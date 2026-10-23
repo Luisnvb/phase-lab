@@ -2,6 +2,8 @@
   max-width: 64rem;
   margin: 0 auto;
   padding: var(--space-6) var(--space-4) 0;
+  padding-left: max(var(--space-4), env(safe-area-inset-left));
+  padding-right: max(var(--space-4), env(safe-area-inset-right));
 }
 
 .header {
@@ -19,6 +21,11 @@
   letter-spacing: -0.01em;
 }
 
+.home {
+  color: inherit;
+  text-decoration: none;
+}
+
 .nav {
   display: flex;
   flex-wrap: wrap;
@@ -29,9 +36,11 @@
 }
 
 .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   color: var(--color-text-muted);
   text-decoration: none;
-  padding-bottom: 2px;
   border-bottom: 2px solid transparent;
 }
 
