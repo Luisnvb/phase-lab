@@ -7,4 +7,6 @@ export * from './phase.ts';
 export * from './plateau.ts';
 export * from './random.ts';
 export * from './resultant.ts';
+export * from './stepped-process.ts';
+export * from './tempo.ts';
 export type * from './types.ts';

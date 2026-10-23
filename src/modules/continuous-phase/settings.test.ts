@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { DEFAULT_SETTINGS, pulseDuration, pulseSourceFor, voiceConfigs } from './settings.ts';
+import { pulseDuration } from '../../core/tempo.ts';
+import { DEFAULT_SETTINGS, pulseSourceFor, voiceConfigs } from './settings.ts';
 
 describe('continuous phase settings', () => {
   test('default tempo gives sixteenth-note steps of ≈ 0.114 s', () => {

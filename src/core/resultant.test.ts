@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { parseRhythm, rotate } from './pattern.ts';
-import { resultant } from './resultant.ts';
+import { resultant, stageMatrix } from './resultant.ts';
 
 describe('resultant', () => {
   test('classifies each step', () => {
@@ -21,5 +21,22 @@ describe('resultant', () => {
 
   test('rejects patterns of different lengths', () => {
     expect(() => resultant(parseRhythm('xx'), parseRhythm('xxx'))).toThrow(RangeError);
+  });
+});
+
+describe('stageMatrix', () => {
+  const pattern = parseRhythm('xx.x');
+
+  test('has N + 1 rows of N cells', () => {
+    const matrix = stageMatrix(pattern);
+    expect(matrix).toHaveLength(5);
+    matrix.forEach((row) => expect(row).toHaveLength(4));
+  });
+
+  test('row k is the resultant against rotate(pattern, k); first and last rows are unison', () => {
+    const matrix = stageMatrix(pattern);
+    expect(matrix[1]).toEqual(resultant(pattern, rotate(pattern, 1)));
+    expect(matrix[0]).toEqual(['both', 'both', 'none', 'both']);
+    expect(matrix[4]).toEqual(matrix[0]);
   });
 });

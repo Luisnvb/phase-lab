@@ -278,6 +278,41 @@ describe('hot changes', () => {
   });
 });
 
+describe('setEndCycle', () => {
+  test('the voice plays no cycle from the end cycle on', async () => {
+    const { fake, engine, ofVoice } = setup();
+    engine.setVoice(voice('A', parseRhythm('xxx'), 0.1));
+    engine.setEndCycle('A', 2);
+    await engine.start();
+    fake.advance(2);
+    expect(ofVoice('A').map((e) => e.cycleIndex)).toEqual([0, 0, 0, 1, 1, 1]);
+  });
+
+  test('a cycle already started is not cut short', async () => {
+    const { fake, engine, ofVoice } = setup();
+    engine.setVoice(voice('A', parseRhythm('xxx'), 0.1));
+    await engine.start();
+    fake.advance(0.45); // in cycle 1
+    engine.setEndCycle('A', 1);
+    fake.advance(2);
+    const a = ofVoice('A');
+    expect(a.map((e) => e.cycleIndex)).toEqual([0, 0, 0, 1, 1, 1]);
+  });
+
+  test('stop() clears it', async () => {
+    const { fake, engine, ofVoice } = setup();
+    engine.setVoice(voice('A', parseRhythm('xxx'), 0.1));
+    engine.setEndCycle('A', 1);
+    await engine.start();
+    fake.advance(1);
+    engine.stop();
+    const before = ofVoice('A').length;
+    await engine.start();
+    fake.advance(1);
+    expect(ofVoice('A').length - before).toBeGreaterThan(3);
+  });
+});
+
 describe('lifecycle', () => {
   test('start waits for resume() before scheduling', async () => {
     let resolveResume = () => {};

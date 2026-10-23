@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createAudioRuntime, type AudioRuntime } from '../engine/audio-runtime.ts';
 
-export type PlaybackStatus = 'idle' | 'loading' | 'playing' | 'paused';
+export type PlaybackStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'ended';
 
 /**
  * Owns a module's audio: the runtime is created on the first play (a user
@@ -33,6 +33,22 @@ export function useAudioRuntime(configure: (runtime: AudioRuntime) => void) {
     statusRef.current = next;
     setStatus(next);
   }, []);
+
+  /** Stops and starts again from the beginning (both voices in unison). */
+  const restart = useCallback(async () => {
+    const current = runtimeRef.current;
+    if (!current) return;
+    current.engine.stop();
+    configureRef.current(current);
+    await current.engine.start();
+    updateStatus('playing');
+  }, [updateStatus]);
+
+  /** For processes with an end: stops the engine once the last cycle has sounded. */
+  const finish = useCallback(() => {
+    runtimeRef.current?.engine.stop();
+    updateStatus('ended');
+  }, [updateStatus]);
 
   const toggle = useCallback(async () => {
     const current = runtimeRef.current;
@@ -66,20 +82,13 @@ export function useAudioRuntime(configure: (runtime: AudioRuntime) => void) {
         updateStatus('playing');
         await current?.resume();
         return;
+      case 'ended':
+        await restart();
+        return;
       case 'loading':
         return;
     }
-  }, [updateStatus]);
+  }, [updateStatus, restart]);
 
-  /** Stops and starts again from the beginning (both voices in unison). */
-  const restart = useCallback(async () => {
-    const current = runtimeRef.current;
-    if (!current) return;
-    current.engine.stop();
-    configureRef.current(current);
-    await current.engine.start();
-    updateStatus('playing');
-  }, [updateStatus]);
-
-  return { runtime, status, toggle, restart };
+  return { runtime, status, toggle, restart, finish };
 }

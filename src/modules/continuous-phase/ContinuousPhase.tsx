@@ -4,7 +4,7 @@ import { PhaseRings } from '../../components/PhaseRings.tsx';
 import { Transport } from '../../components/Transport.tsx';
 import type { AudioRuntime } from '../../engine/audio-runtime.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
-import styles from './ContinuousPhase.module.css';
+import styles from '../../styles/module-layout.module.css';
 import {
   DEFAULT_SETTINGS,
   LIMITS,

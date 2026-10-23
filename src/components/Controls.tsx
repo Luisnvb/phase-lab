@@ -39,6 +39,21 @@ export function Slider({ label, value, min, max, step, format, onChange, disable
   );
 }
 
+type CheckboxProps = {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+};
+
+export function Checkbox({ label, checked, onChange }: CheckboxProps) {
+  return (
+    <label className={styles.option}>
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      {label}
+    </label>
+  );
+}
+
 type ChoiceProps<T extends string> = {
   label: string;
   value: T;

@@ -1,0 +1,83 @@
+.figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  max-width: 34rem;
+  height: auto;
+}
+
+.label,
+.labelCurrent {
+  fill: var(--color-text-muted);
+  font-size: 11px;
+  text-anchor: end;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+
+.labelCurrent {
+  fill: var(--color-text);
+  font-weight: 700;
+}
+
+.currentRow {
+  fill: var(--color-text);
+  fill-opacity: 0.08;
+  stroke: var(--color-text);
+  stroke-width: 1.5;
+}
+
+.both {
+  fill: var(--color-text);
+}
+
+.frame {
+  fill: none;
+  stroke: var(--color-voice-a);
+  stroke-width: 1;
+}
+
+.a {
+  fill: var(--color-voice-a);
+}
+
+.b {
+  fill: none;
+  stroke: var(--color-voice-b);
+  stroke-width: 2;
+}
+
+.none {
+  fill: var(--color-text-muted);
+}
+
+.cursor {
+  fill: none;
+  stroke: var(--color-focus);
+  stroke-width: 3;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}

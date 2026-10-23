@@ -1,5 +1,6 @@
 import { DEFAULT_MELODY, DEFAULT_RHYTHM } from '../../core/defaults.ts';
 import { createPlateauSource } from '../../core/plateau.ts';
+import { pulseDuration } from '../../core/tempo.ts';
 import type { Pattern, PulseSource, VoiceConfig } from '../../core/types.ts';
 
 export type PhaseMode = 'continuous' | 'plateau';
@@ -32,10 +33,6 @@ export const LIMITS = {
 
 /** Voices pan to opposite sides so the phasing can be heard in space (SPEC §6). */
 const PAN = 0.4;
-
-export function pulseDuration(bpm: number): number {
-  return 60 / bpm / 4;
-}
 
 export function patternFor(material: Material): Pattern {
   return material === 'melody' ? DEFAULT_MELODY : DEFAULT_RHYTHM;

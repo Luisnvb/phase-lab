@@ -12,6 +12,7 @@ const LABELS: Record<PlaybackStatus, string> = {
   loading: 'Cargando…',
   playing: 'Pausar',
   paused: 'Reanudar',
+  ended: 'Empezar de nuevo',
 };
 
 /** Elements where the space bar already means something. */

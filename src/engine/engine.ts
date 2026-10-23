@@ -35,6 +35,11 @@ export interface Engine {
   setPulseSource(voice: VoiceId, source: PulseSource | null): void;
   /** Applied at the start of the voice's next cycle, never mid-cycle. */
   setPatternOffset(voice: VoiceId, steps: number): void;
+  /**
+   * The voice plays no cycle from `cycle` on (`null`: no end). A cycle already
+   * started is never cut short. Cleared by `stop()`.
+   */
+  setEndCycle(voice: VoiceId, cycle: number | null): void;
   getRecentEvents(sinceTime: number): ScheduledEvent[];
   /**
    * The next event of each voice: its time is already fixed but it is not in the
@@ -79,6 +84,7 @@ type VoiceState = {
   cycleIndex: number;
   patternOffset: number;
   pendingOffset: number | null;
+  endCycle: number | null;
   /** Times of past events, at `index % HISTORY_SIZE`. */
   history: Float64Array;
 };
@@ -225,7 +231,11 @@ export function createEngine(options: EngineOptions): Engine {
     for (;;) {
       let earliest: VoiceState | null = null;
       for (const voice of voices.values()) {
-        if (voice.nextTime < horizon && (!earliest || voice.nextTime < earliest.nextTime)) {
+        // A voice only ends on a cycle boundary.
+        const finished =
+          voice.endCycle !== null && voice.stepIndex === 0 && voice.cycleIndex >= voice.endCycle;
+        if (finished || voice.nextTime >= horizon) continue;
+        if (!earliest || voice.nextTime < earliest.nextTime) {
           earliest = voice;
         }
       }
@@ -239,6 +249,7 @@ export function createEngine(options: EngineOptions): Engine {
     voice.stepIndex = 0;
     voice.cycleIndex = 0;
     voice.nextTime = 0;
+    voice.endCycle = null;
     voice.source?.reset?.();
     if (voice.pendingOffset !== null) {
       voice.patternOffset = voice.pendingOffset;
@@ -289,6 +300,7 @@ export function createEngine(options: EngineOptions): Engine {
         cycleIndex: 0,
         patternOffset: 0,
         pendingOffset: null,
+        endCycle: null,
         history: new Float64Array(HISTORY_SIZE),
       });
     },
@@ -301,6 +313,11 @@ export function createEngine(options: EngineOptions): Engine {
 
     setPulseSource(id, source) {
       getVoice(id).source = source;
+    },
+
+    setEndCycle(id, cycle) {
+      if (cycle !== null) assertInteger(cycle, 'cycle');
+      getVoice(id).endCycle = cycle;
     },
 
     setPatternOffset(id, steps) {
