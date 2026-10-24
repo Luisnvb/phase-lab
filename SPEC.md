@@ -323,3 +323,32 @@ docs/              # captura para el README
 - **Decidido:** CSS Modules (M0).
 - **iOS y grabación:** la sesión de audio pasa a `play-and-record` mientras se graba y vuelve a `playback`; cada navegador graba en un formato distinto. Riesgo principal sin probar.
 - **Dependencias de desarrollo:** `npm audit` señala vulnerabilidades en Vite, Vitest y sus dependencias (solo herramientas de desarrollo; la app publicada no tiene ninguna). Corregirlas exige Vite 8 y Vitest 5, que requieren Node ≥ 22; el entorno local usa Node 21.
+
+---
+
+## 11. Pendiente y siguientes pasos
+
+*Anotado al cerrar la sesión del 24 de octubre de 2026, con la versión 0.4 publicada.*
+
+### Pendiente (por orden de importancia)
+1. **Prueba manual en navegadores** (criterio de M5, aún sin cumplir). Solo se ha probado en Chrome de escritorio.
+   - **iOS Safari:** que suene con el interruptor de silencio activado; que tras una llamada o al volver de otra app el botón pase a «Reanudar» y siga sonando al pulsarlo; que el botón de reproducir no quede bajo la barra inferior.
+   - **Grabación por micrófono** (variante con cinta) en Chrome, Firefox, Safari e iOS: cada navegador graba en un formato distinto y en iOS cambia la sesión de audio. No se ha probado en ningún navegador.
+   - **Firefox y Safari de escritorio:** los cinco módulos, la cinta y la exportación.
+2. **Comprobaciones de oído:** que cursor y sonido no se separen tras 5 minutos (módulo 1); que los WAV exportados suenen como la reproducción; el equilibrio entre órgano y maraca (aumentación) y el timbre de «solo resultante».
+3. **Botón «Copiar enlace»:** sin probar (se evitó sobrescribir el portapapeles). En iOS puede requerir que la página tenga el foco.
+4. **Actualizar Node a ≥ 22** en el entorno local y, después, Vite 8 y Vitest 5, para resolver las vulnerabilidades de las herramientas de desarrollo (§10). La integración continua ya usa Node 22.
+
+### Limitaciones conocidas (menores)
+- Al reiniciar al unísono pueden solaparse hasta ~50 ms de notas ya programadas.
+- En la sustitución, si se cambia el orden durante la reproducción, los números de turno se actualizan antes que el sonido (menos de un ciclo).
+- No hay tests de componentes de interfaz; solo de la lógica pura, el motor y los procesos.
+- En GitHub pueden quedar en caché los commits anteriores a la reescritura del correo (inaccesibles sin conocer su identificador).
+
+### Ideas para una posible versión 0.5 (por decidir)
+- Seleccionar un subconjunto de la resultante para aislar una línea emergente (previsto como «posterior» en §5).
+- N variable (8, 12 o 16 pasos) en la interfaz; el motor ya lo admite (§10).
+- Modo mesetas en la variante con cinta.
+- Editar la melodía del módulo 1 y el acorde de la aumentación.
+- Exportar MIDI además de WAV.
+- Tests de componentes de interfaz (por ejemplo, con Testing Library).
