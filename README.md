@@ -6,6 +6,8 @@ Cada módulo combina sonido generado en tiempo real, una visualización sincroni
 
 **Pruébala:** https://luisnvb.dev/phase-lab/
 
+![Módulo de desfase continuo en modo «con mesetas»: dos anillos concéntricos con los pasos de las voces A y B, el arco del desfase (4,87 pasos) y un anillo exterior con la resultante; a la derecha, los controles.](docs/screenshot.png)
+
 ## Módulos
 
 | Módulo | Qué muestra | Estado |
