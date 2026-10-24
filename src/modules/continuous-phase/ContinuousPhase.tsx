@@ -77,7 +77,8 @@ export default function ContinuousPhase() {
           adelanta: el patrón se superpone consigo mismo en posiciones distintas y aparecen
           figuras nuevas, hasta que tras una vuelta completa ambas vuelven al unísono. Con
           «mesetas», B se detiene en cada desfase exacto durante unos ciclos, como suele hacerse
-          al tocarlo en directo. Para escuchar: <cite>Piano Phase</cite> (1967).
+          al tocarlo en directo. Para escuchar: <cite>Piano Phase</cite> (1967).{' '}
+          <a href="#/desfase-cinta">Pruébalo con tu propia voz</a>.
         </p>
       </header>
 

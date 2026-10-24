@@ -1,0 +1,53 @@
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.grid {
+  stroke: var(--color-border);
+  stroke-width: 0.5;
+}
+
+.gridStrong {
+  stroke: var(--color-border);
+  stroke-width: 1.25;
+}
+
+.outside {
+  fill: var(--color-text);
+  fill-opacity: 0.05;
+}
+
+/* End of the current cycle: thick and dashed, not only a color. */
+.cycleEnd {
+  stroke: var(--color-text);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.label {
+  fill: var(--color-text-muted);
+  font-size: 12px;
+  text-anchor: end;
+  dominant-baseline: central;
+}
+
+.bar {
+  fill: var(--color-voice-a);
+}
+
+.ghost {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+.pulse {
+  fill: var(--color-text-muted);
+}
+
+.cursor {
+  fill: var(--color-focus);
+}

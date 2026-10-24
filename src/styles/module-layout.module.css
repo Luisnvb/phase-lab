@@ -49,6 +49,26 @@
   text-align: center;
 }
 
+.placeholder {
+  margin: 0;
+  padding: var(--space-8) var(--space-4);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.notice {
+  margin: 0;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
 .buttons {
   display: flex;
   flex-wrap: wrap;

@@ -45,4 +45,28 @@ describe('onCycleBoundary', () => {
       ['B', 2],
     ]);
   });
+
+  test('a longer pattern set at the boundary starts a new cycle, not the rest of the old one', async () => {
+    const fake = createFakeClock();
+    const engine = createEngine({ clock: fake.clock, timer: fake.timer });
+    let length = 2;
+    engine.setVoice(config('A', parseRhythm('x.')));
+    const events: ScheduledEvent[] = [];
+    engine.on('step', (e) => events.push(e));
+    onCycleBoundary(
+      engine,
+      () => length,
+      () => {
+        length++;
+        engine.setVoice(config('A', parseRhythm('x' + '.'.repeat(length - 1))));
+      },
+    );
+    await engine.start();
+    fake.advance(1.5);
+
+    const lengths = [0, 1, 2, 3].map((c) => events.filter((e) => e.cycleIndex === c).length);
+    expect(lengths).toEqual([2, 3, 4, 5]);
+    // Each cycle opens with its active first step.
+    expect(events.filter((e) => e.stepIndex === 0).every((e) => e.active)).toBe(true);
+  });
 });

@@ -49,6 +49,21 @@ export function positionAt(
   time: number,
   stepsPerCycle: number,
 ): number | null {
+  const at = stepAt(events, voice, time);
+  if (!at) return null;
+  return at.cycleIndex * stepsPerCycle + at.stepIndex + at.fraction;
+}
+
+/**
+ * Cycle, step and fraction of the step that a voice is on at `time`, from its
+ * events. Unlike `positionAt`, it works when cycles have different lengths.
+ * Returns null when `time` is not bracketed by two events of that voice.
+ */
+export function stepAt(
+  events: readonly ScheduledEvent[],
+  voice: VoiceId,
+  time: number,
+): { cycleIndex: number; stepIndex: number; fraction: number } | null {
   let previous: ScheduledEvent | undefined;
   let next: ScheduledEvent | undefined;
   for (const event of events) {
@@ -60,7 +75,9 @@ export function positionAt(
     }
   }
   if (!previous || !next) return null;
-
-  const fraction = (time - previous.time) / (next.time - previous.time);
-  return previous.cycleIndex * stepsPerCycle + previous.stepIndex + fraction;
+  return {
+    cycleIndex: previous.cycleIndex,
+    stepIndex: previous.stepIndex,
+    fraction: (time - previous.time) / (next.time - previous.time),
+  };
 }

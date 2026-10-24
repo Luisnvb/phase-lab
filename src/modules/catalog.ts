@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
+import Augmentation from './augmentation/Augmentation.tsx';
 import ContinuousPhase from './continuous-phase/ContinuousPhase.tsx';
+import TapePhase from './continuous-phase/TapePhase.tsx';
 import MetricAmbiguity from './metric-ambiguity/MetricAmbiguity.tsx';
 import SteppedPhase from './stepped-phase/SteppedPhase.tsx';
 import Substitution from './substitution/Substitution.tsx';
@@ -11,6 +13,8 @@ export type ModuleEntry = {
   summary: string;
   /** Missing for modules planned in later versions. */
   Component?: ComponentType;
+  /** Variants are reachable from their module and the home page, not the header. */
+  variant?: boolean;
 };
 
 export const MODULES: readonly ModuleEntry[] = [
@@ -20,6 +24,14 @@ export const MODULES: readonly ModuleEntry[] = [
     summary:
       'Dos voces con el mismo patrón: una va un poco más deprisa, se separa poco a poco y acaba volviendo al unísono.',
     Component: ContinuousPhase,
+  },
+  {
+    route: 'desfase-cinta',
+    title: 'Desfase con cinta',
+    summary:
+      'Variante del desfase continuo con tu propia voz: dos copias de una grabación corta en bucle, una algo más rápida.',
+    Component: TapePhase,
+    variant: true,
   },
   {
     route: 'desfase-por-saltos',
@@ -44,5 +56,6 @@ export const MODULES: readonly ModuleEntry[] = [
     route: 'aumentacion',
     title: 'Aumentación',
     summary: 'Las notas de un acorde se alargan ciclo a ciclo sobre un pulso que no cambia.',
+    Component: Augmentation,
   },
 ];

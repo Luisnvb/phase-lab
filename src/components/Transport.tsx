@@ -5,6 +5,8 @@ import styles from './Transport.module.css';
 type Props = {
   status: PlaybackStatus;
   onToggle: () => void;
+  /** Nothing to play yet (e.g. no recording). */
+  disabled?: boolean;
 };
 
 const LABELS: Record<PlaybackStatus, string> = {
@@ -33,16 +35,16 @@ function handlesSpace(target: EventTarget | null): boolean {
 }
 
 /** Large play/pause button, always visible; the space bar toggles it (SPEC §6). */
-export function Transport({ status, onToggle }: Props) {
+export function Transport({ status, onToggle, disabled = false }: Props) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || event.repeat || handlesSpace(event.target)) return;
+      if (event.code !== 'Space' || event.repeat || disabled || handlesSpace(event.target)) return;
       event.preventDefault();
       onToggle();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onToggle]);
+  }, [onToggle, disabled]);
 
   const playing = status === 'playing';
   return (
@@ -51,7 +53,7 @@ export function Transport({ status, onToggle }: Props) {
         type="button"
         className={styles.button}
         onClick={onToggle}
-        disabled={status === 'loading'}
+        disabled={disabled || status === 'loading'}
         aria-keyshortcuts="Space"
       >
         <span className={styles.icon} aria-hidden="true">

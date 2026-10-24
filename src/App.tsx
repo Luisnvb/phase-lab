@@ -24,7 +24,7 @@ export default function App() {
         </h1>
         <nav aria-label="Módulos">
           <ul className={styles.nav}>
-            {AVAILABLE.map((module) => (
+            {AVAILABLE.filter((module) => !module.variant).map((module) => (
               <li key={module.route}>
                 <a
                   href={`#/${module.route}`}

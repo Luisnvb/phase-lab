@@ -198,6 +198,8 @@ export function createEngine(options: EngineOptions): Engine {
     }
 
     const step = currentStep(voice, voice.patternOffset);
+    // A listener may replace the pattern; this cycle still ends at the length it was played with.
+    const cycleLength = voice.config.pattern.steps.length;
     const event = eventFor(voice, step);
 
     queue.push(event);
@@ -217,7 +219,7 @@ export function createEngine(options: EngineOptions): Engine {
     voice.nextTime += interval;
     voice.index++;
     voice.stepIndex++;
-    if (voice.stepIndex >= voice.config.pattern.steps.length) {
+    if (voice.stepIndex >= cycleLength) {
       voice.stepIndex = 0;
       voice.cycleIndex++;
     }

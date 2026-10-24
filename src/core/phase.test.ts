@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { nearestStage, phaseOffset, phaseReadout, positionAt } from './phase.ts';
+import { nearestStage, phaseOffset, phaseReadout, positionAt, stepAt } from './phase.ts';
 import type { ScheduledEvent, VoiceId } from './types.ts';
 
 describe('phaseOffset', () => {
@@ -73,5 +73,27 @@ describe('positionAt', () => {
     expect(positionAt(events, 'A', 0.5, 4)).toBeNull();
     expect(positionAt(events, 'A', 10, 4)).toBeNull();
     expect(positionAt(events, 'B', 2, 4)).toBeNull();
+  });
+});
+
+describe('stepAt', () => {
+  // Cycles of 2 and then 3 steps, one step every 0.5 s.
+  const layout: [number, number][] = [[0, 0], [0, 1], [1, 0], [1, 1], [1, 2], [2, 0]];
+  const events: ScheduledEvent[] = layout.map(([cycleIndex, stepIndex], n) => ({
+    voice: 'A' as VoiceId,
+    cycleIndex,
+    stepIndex,
+    time: n * 0.5,
+    active: true,
+  }));
+
+  test('cycle, step and fraction, with cycles of different lengths', () => {
+    expect(stepAt(events, 'A', 0.25)).toEqual({ cycleIndex: 0, stepIndex: 0, fraction: 0.5 });
+    expect(stepAt(events, 'A', 2.1)).toEqual({ cycleIndex: 1, stepIndex: 2, fraction: expect.closeTo(0.2) });
+  });
+
+  test('null outside the known events', () => {
+    expect(stepAt(events, 'A', 3)).toBeNull();
+    expect(stepAt(events, 'B', 1)).toBeNull();
   });
 });

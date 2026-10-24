@@ -1,4 +1,5 @@
 export * from './accents.ts';
+export * from './augmentation.ts';
 export * from './cycle-history.ts';
 export * from './defaults.ts';
 export * from './fill-order.ts';
@@ -11,5 +12,6 @@ export * from './random.ts';
 export * from './resultant.ts';
 export * from './stepped-process.ts';
 export * from './substitution.ts';
+export * from './tape.ts';
 export * from './tempo.ts';
 export type * from './types.ts';

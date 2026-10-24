@@ -5,6 +5,8 @@ export type Step = {
   readonly active: boolean;
   readonly pitch?: string;
   readonly velocity?: number;
+  /** How long the note rings, in steps (default: most of one step). */
+  readonly length?: number;
 };
 
 /** A cycle of steps. Default length: 12. */
@@ -12,7 +14,7 @@ export type Pattern = { readonly steps: readonly Step[] };
 
 export type VoiceId = 'A' | 'B';
 
-export type InstrumentId = 'mallet' | 'click' | 'pianoish';
+export type InstrumentId = 'mallet' | 'click' | 'pianoish' | 'organ' | 'shaker';
 
 export type VoiceConfig = {
   readonly id: VoiceId;

@@ -68,8 +68,8 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
     },
     play: (event, step, voice) => {
       const channel = soloResultant ? resultantChannel : channels.get(voice.id);
-      // Notes ring for most of the step, so fast tempos do not pile up voices.
-      channel?.instrument.play(event.time, step, voice.pulseDuration * 0.9);
+      // By default notes ring for most of the step, so fast tempos do not pile up voices.
+      channel?.instrument.play(event.time, step, voice.pulseDuration * (step.length ?? 0.9));
     },
   });
 
