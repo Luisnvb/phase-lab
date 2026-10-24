@@ -1,6 +1,12 @@
+.scroller {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .svg {
   display: block;
   width: 100%;
+  min-width: 34rem;
   height: auto;
 }
 

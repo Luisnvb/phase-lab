@@ -12,6 +12,10 @@ export default function App() {
 
   useEffect(() => {
     document.title = current ? `${current.title} · Procesos` : 'Procesos';
+    // On narrow screens the menu scrolls sideways: keep the current module in view.
+    document
+      .querySelector('nav [aria-current="page"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [current]);
 
   return (
@@ -22,7 +26,7 @@ export default function App() {
             Procesos
           </a>
         </h1>
-        <nav aria-label="Módulos">
+        <nav aria-label="Módulos" className={styles.menu}>
           <ul className={styles.nav}>
             {AVAILABLE.filter((module) => !module.variant).map((module) => (
               <li key={module.route}>

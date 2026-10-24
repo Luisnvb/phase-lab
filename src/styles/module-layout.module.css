@@ -19,6 +19,9 @@
 /* Mobile: visualization, then controls below. ≥ 1024 px: controls on the right. */
 .layout {
   display: grid;
+  /* minmax(0, …): wide content (e.g. the piano roll) scrolls inside its box
+     instead of stretching the column past the screen. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-8);
 }
 
