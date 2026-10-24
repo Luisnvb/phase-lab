@@ -1,6 +1,7 @@
 import { DEFAULT_RHYTHM } from '../../core/defaults.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { Pattern, VoiceConfig } from '../../core/types.ts';
+import type { UrlSchema } from '../../core/url-state.ts';
 
 export type SteppedPhaseSettings = {
   /** Quarter notes per minute, the same for both voices. */
@@ -36,3 +37,12 @@ export function voiceConfigs(settings: SteppedPhaseSettings): [VoiceConfig, Voic
     { id: 'B', pattern, pulseDuration: pulse, instrument: 'click', gain: 0.8, pan: PAN },
   ];
 }
+
+/** Settings shared by URL (v0.4). */
+export const URL_SCHEMA: UrlSchema<SteppedPhaseSettings> = {
+  bpm: { key: 'bpm', type: 'number', ...LIMITS.bpm, integer: true },
+  repetitions: { key: 'm', type: 'number', ...LIMITS.repetitions, integer: true },
+  auto: { key: 'auto', type: 'boolean' },
+  loop: { key: 'bucle', type: 'boolean' },
+  pattern: { key: 'patron', type: 'rhythm', length: 12 },
+};

@@ -2,30 +2,29 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Checkbox, Choice, Slider } from '../../components/Controls.tsx';
 import { PatternEditor } from '../../components/PatternEditor.tsx';
 import { moveColumnCursor, moveStageCursor } from '../../components/stage-matrix-geometry.ts';
+import { ShareExport } from '../../components/ShareExport.tsx';
 import { StageMatrix } from '../../components/StageMatrix.tsx';
 import { Transport } from '../../components/Transport.tsx';
 import { VoiceRows } from '../../components/VoiceRows.tsx';
 import { toggleStep } from '../../core/pattern.ts';
 import { positionAt } from '../../core/phase.ts';
 import { stageMatrix } from '../../core/resultant.ts';
-import {
-  createSteppedProcess,
-  type StageInfo,
-  type SteppedProcess,
-} from '../../core/stepped-process.ts';
-import type { AudioRuntime } from '../../engine/audio-runtime.ts';
+import type { StageInfo, SteppedProcess } from '../../core/stepped-process.ts';
+import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
 import { eventsAround } from '../../engine/timeline.ts';
 import { useAnimationFrame } from '../../state/use-animation-frame.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
 import { useReducedMotion } from '../../state/use-reduced-motion.ts';
+import { useUrlSettings } from '../../state/use-url-settings.ts';
 import styles from '../../styles/module-layout.module.css';
-import { driveSteppedProcess } from './process-driver.ts';
 import {
   DEFAULT_SETTINGS,
   LIMITS,
+  URL_SCHEMA,
   voiceConfigs,
   type SteppedPhaseSettings,
 } from './settings.ts';
+import { setupSteppedPhase } from './setup.ts';
 
 type Advance = 'auto' | 'manual';
 
@@ -39,7 +38,7 @@ function applyVoices(runtime: AudioRuntime, settings: SteppedPhaseSettings): voi
 }
 
 export default function SteppedPhase() {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const settingsRef = useRef(settings);
   useEffect(() => {
     settingsRef.current = settings;
@@ -70,18 +69,14 @@ export default function SteppedPhase() {
   // Runs before every start: fresh process, attached before the first cycle is scheduled.
   const configure = useCallback(
     (runtime: AudioRuntime) => {
-      const current = settingsRef.current;
-      applyVoices(runtime, current);
-      runtime.setSoloResultant(soloResultantRef.current);
       detachRef.current?.();
-      const process = createSteppedProcess({
-        steps: current.pattern.steps.length,
-        repetitions: current.repetitions,
-        auto: current.auto,
-        loop: current.loop,
-      });
+      const { process, detach } = setupSteppedPhase(
+        runtime,
+        settingsRef.current,
+        soloResultantRef.current,
+      );
       processRef.current = process;
-      detachRef.current = driveSteppedProcess(runtime.engine, process, current.pattern.steps.length);
+      detachRef.current = detach;
       showStage(null);
     },
     [showStage],
@@ -230,6 +225,17 @@ export default function SteppedPhase() {
           >
             {soloResultant ? 'Volver a escuchar A y B' : 'Escuchar solo la resultante'}
           </button>
+          <ShareExport
+            filename="desfase-por-saltos"
+            render={(seconds) =>
+              // The export always advances on its own: nobody presses "next stage" offline.
+              renderOffline(
+                (runtime) => setupSteppedPhase(runtime, { ...settings, auto: true }, soloResultant),
+                seconds,
+              )
+            }
+            note="La exportación avanza las etapas automáticamente."
+          />
         </section>
       </div>
 

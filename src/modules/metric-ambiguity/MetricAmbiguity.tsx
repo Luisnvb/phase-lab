@@ -2,32 +2,34 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Checkbox, Choice, Slider } from '../../components/Controls.tsx';
 import { GroupingRows } from '../../components/GroupingRows.tsx';
 import { moveColumnCursor } from '../../components/stage-matrix-geometry.ts';
+import { ShareExport } from '../../components/ShareExport.tsx';
 import matrixStyles from '../../components/StageMatrix.module.css';
 import { Transport } from '../../components/Transport.tsx';
-import { createCycleHistory, type CycleHistory } from '../../core/cycle-history.ts';
+import type { CycleHistory } from '../../core/cycle-history.ts';
 import { twoVoiceMix } from '../../core/mix.ts';
 import { positionAt } from '../../core/phase.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { VoiceId } from '../../core/types.ts';
-import type { AudioRuntime } from '../../engine/audio-runtime.ts';
+import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
 import { eventsAround } from '../../engine/timeline.ts';
 import { useAnimationFrame } from '../../state/use-animation-frame.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
 import { useReducedMotion } from '../../state/use-reduced-motion.ts';
+import { useUrlSettings } from '../../state/use-url-settings.ts';
 import styles from '../../styles/module-layout.module.css';
-import { driveGroupings } from './grouping-driver.ts';
 import {
   basePattern,
   BPM_LIMITS,
   DEFAULT_SETTINGS,
   GROUP_SIZES,
-  groupFor,
   groupingLabel,
+  URL_SCHEMA,
   voiceConfig,
   type GroupSize,
   type Material,
   type MetricSettings,
 } from './settings.ts';
+import { setupMetricAmbiguity } from './setup.ts';
 
 const MATERIAL_OPTIONS = [
   { value: 'pulse', label: 'Pulso' },
@@ -42,7 +44,7 @@ const GROUPING_OPTIONS = GROUP_SIZES.map((size) => ({
 type Sounding = Record<VoiceId, GroupSize>;
 
 export default function MetricAmbiguity() {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const settingsRef = useRef(settings);
   useEffect(() => {
     settingsRef.current = settings;
@@ -65,23 +67,14 @@ export default function MetricAmbiguity() {
 
   const configure = useCallback(
     (runtime: AudioRuntime) => {
-      const current = settingsRef.current;
-      const histories = {
-        A: createCycleHistory(groupFor(current, 'A')),
-        B: createCycleHistory(groupFor(current, 'B')),
-      };
-      historiesRef.current = histories;
-      for (const voice of ['A', 'B'] as const) runtime.setVoice(voiceConfig(current, voice));
       detachRef.current?.();
-      detachRef.current = driveGroupings(
-        runtime.engine,
-        basePattern(current.material).steps.length,
-        (voice) => ({
-          config: voiceConfig(settingsRef.current, voice),
-          grouping: groupFor(settingsRef.current, voice),
-        }),
-        histories,
+      const { histories, detach } = setupMetricAmbiguity(
+        runtime,
+        settingsRef.current,
+        () => settingsRef.current,
       );
+      historiesRef.current = histories;
+      detachRef.current = detach;
       showSounding(null);
     },
     [showSounding],
@@ -192,6 +185,12 @@ export default function MetricAmbiguity() {
             {...BPM_LIMITS}
             format={(value) => `${value}`}
             onChange={(value) => update('bpm', value)}
+          />
+          <ShareExport
+            filename="ambiguedad-3-contra-2"
+            render={(seconds) =>
+              renderOffline((runtime) => setupMetricAmbiguity(runtime, settings), seconds)
+            }
           />
         </section>
       </div>

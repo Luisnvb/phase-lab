@@ -4,6 +4,7 @@ import { twoVoiceMix } from '../../core/mix.ts';
 import { parseRhythm } from '../../core/pattern.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { Pattern, VoiceConfig, VoiceId } from '../../core/types.ts';
+import type { UrlSchema } from '../../core/url-state.ts';
 
 export type Material = 'pulse' | 'melody';
 
@@ -57,3 +58,12 @@ export function voiceConfig(settings: MetricSettings, voice: VoiceId): VoiceConf
     ...twoVoiceMix(settings.twoVoices, voice),
   };
 }
+
+/** Settings shared by URL (v0.4). */
+export const URL_SCHEMA: UrlSchema<MetricSettings> = {
+  bpm: { key: 'bpm', type: 'number', ...BPM_LIMITS, integer: true },
+  material: { key: 'material', type: 'choice', values: ['pulse', 'melody'] },
+  groupA: { key: 'a', type: 'choice', values: GROUP_SIZES },
+  twoVoices: { key: 'dos', type: 'boolean' },
+  groupB: { key: 'b', type: 'choice', values: GROUP_SIZES },
+};

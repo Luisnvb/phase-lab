@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Choice, Slider } from '../../components/Controls.tsx';
 import { PianoRoll } from '../../components/PianoRoll.tsx';
 import { movePianoRollCursor } from '../../components/piano-roll-geometry.ts';
+import { ShareExport } from '../../components/ShareExport.tsx';
 import { Transport } from '../../components/Transport.tsx';
 import {
-  createAugmentationProcess,
   cycleLength,
   initialChord,
   type AugmentationCycle,
@@ -13,23 +13,23 @@ import {
 } from '../../core/augmentation.ts';
 import { stepAt } from '../../core/phase.ts';
 import { pulseDuration } from '../../core/tempo.ts';
-import type { AudioRuntime } from '../../engine/audio-runtime.ts';
+import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
 import { eventsAround } from '../../engine/timeline.ts';
 import { useAnimationFrame } from '../../state/use-animation-frame.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
 import { useReducedMotion } from '../../state/use-reduced-motion.ts';
+import { useUrlSettings } from '../../state/use-url-settings.ts';
 import styles from '../../styles/module-layout.module.css';
-import { driveAugmentation } from './process-driver.ts';
 import {
   amountFor,
-  chordConfig,
   DEFAULT_SETTINGS,
   LIMITS,
   MAX_CYCLE,
   MIN_CYCLE,
-  pulseConfig,
+  URL_SCHEMA,
   type AugmentationSettings,
 } from './settings.ts';
+import { setupAugmentation } from './setup.ts';
 
 const MODE_OPTIONS = [
   { value: 'factor', label: 'Por un factor' },
@@ -44,7 +44,7 @@ const factorFormat = new Intl.NumberFormat('es-ES', {
 type Shown = { cycle: number; data: AugmentationCycle };
 
 export default function Augmentation() {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const settingsRef = useRef(settings);
   useEffect(() => {
     settingsRef.current = settings;
@@ -66,21 +66,14 @@ export default function Augmentation() {
   // Runs before every start: a fresh process from the original chord.
   const configure = useCallback(
     (runtime: AudioRuntime) => {
-      const current = settingsRef.current;
-      const process = createAugmentationProcess({
-        size: current.size,
-        mode: current.mode,
-        amount: amountFor(current),
-        minimum: MIN_CYCLE,
-        maximum: MAX_CYCLE,
-      });
-      processRef.current = process;
-      runtime.setVoice(chordConfig(current, process.cycleAt(0)!));
-      runtime.setVoice(pulseConfig(current));
       detachRef.current?.();
-      detachRef.current = driveAugmentation(runtime.engine, process, (cycle) =>
-        chordConfig(settingsRef.current, cycle),
+      const { process, detach } = setupAugmentation(
+        runtime,
+        settingsRef.current,
+        () => settingsRef.current,
       );
+      processRef.current = process;
+      detachRef.current = detach;
       show(null);
     },
     [show],
@@ -205,6 +198,13 @@ export default function Augmentation() {
             {...LIMITS.bpm}
             format={(value) => `${value}`}
             onChange={(value) => update('bpm', value)}
+          />
+          <ShareExport
+            filename="aumentacion"
+            render={(seconds) =>
+              renderOffline((runtime) => setupAugmentation(runtime, settings), seconds)
+            }
+            note="Si el proceso termina antes, el audio acaba con él."
           />
         </section>
       </div>

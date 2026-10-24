@@ -5,6 +5,7 @@ import {
 } from '../../core/augmentation.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { VoiceConfig } from '../../core/types.ts';
+import type { UrlSchema } from '../../core/url-state.ts';
 
 export type AugmentationSettings = {
   readonly bpm: number;
@@ -63,3 +64,12 @@ export function pulseConfig(settings: AugmentationSettings): VoiceConfig {
     pan: 0,
   };
 }
+
+/** Settings shared by URL (v0.4). */
+export const URL_SCHEMA: UrlSchema<AugmentationSettings> = {
+  bpm: { key: 'bpm', type: 'number', ...LIMITS.bpm, integer: true },
+  size: { key: 'notas', type: 'number', ...LIMITS.size, integer: true },
+  mode: { key: 'modo', type: 'choice', values: ['factor', 'pulses'] },
+  factor: { key: 'factor', type: 'number', ...LIMITS.factor },
+  pulses: { key: 'pulsos', type: 'number', ...LIMITS.pulses, integer: true },
+};

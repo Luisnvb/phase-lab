@@ -14,4 +14,6 @@ export * from './stepped-process.ts';
 export * from './substitution.ts';
 export * from './tape.ts';
 export * from './tempo.ts';
+export * from './url-state.ts';
+export * from './wav.ts';
 export type * from './types.ts';

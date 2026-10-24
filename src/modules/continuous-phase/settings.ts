@@ -2,6 +2,7 @@ import { DEFAULT_MELODY, DEFAULT_RHYTHM } from '../../core/defaults.ts';
 import { createPlateauSource } from '../../core/plateau.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { Pattern, PulseSource, VoiceConfig } from '../../core/types.ts';
+import type { UrlSchema } from '../../core/url-state.ts';
 
 export type PhaseMode = 'continuous' | 'plateau';
 export type Material = 'melody' | 'rhythm';
@@ -72,3 +73,12 @@ export function pulseSourceFor(settings: PulseSourceSettings): PulseSource | nul
     stepsPerCycle: patternFor(settings.material).steps.length,
   });
 }
+
+/** Settings shared by URL (v0.4). */
+export const URL_SCHEMA: UrlSchema<ContinuousPhaseSettings> = {
+  bpm: { key: 'bpm', type: 'number', ...LIMITS.bpm, integer: true },
+  differencePercent: { key: 'd', type: 'number', ...LIMITS.differencePercent },
+  mode: { key: 'modo', type: 'choice', values: ['continuous', 'plateau'] },
+  plateauCycles: { key: 'k', type: 'number', ...LIMITS.plateauCycles, integer: true },
+  material: { key: 'material', type: 'choice', values: ['melody', 'rhythm'] },
+};

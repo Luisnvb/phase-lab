@@ -4,6 +4,7 @@ import {
   withRateChange,
   type TapeSegment,
 } from '../core/tape.ts';
+import type { RenderedAudio } from './audio-runtime.ts';
 
 /** Part of the recording that loops, in seconds. */
 export type TapeRegion = { readonly start: number; readonly end: number };
@@ -37,6 +38,59 @@ type Loop = { source: AudioBufferSourceNode; segments: TapeSegment[] };
 const PAN = 0.4;
 const START_DELAY = 0.05;
 
+/** Output gain and the two panners (A left, B right) the loops play through. */
+function createMix(context: BaseAudioContext): [StereoPannerNode, StereoPannerNode] {
+  const output = context.createGain();
+  output.gain.value = 0.8;
+  output.connect(context.destination);
+  const [a, b] = [-PAN, PAN].map((pan) => {
+    const panner = context.createStereoPanner();
+    panner.pan.value = pan;
+    panner.connect(output);
+    return panner;
+  });
+  return [a!, b!];
+}
+
+function startLoop(
+  context: BaseAudioContext,
+  buffer: AudioBuffer,
+  region: TapeRegion,
+  rate: number,
+  destination: AudioNode,
+  at: number,
+): AudioBufferSourceNode {
+  const source = context.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  source.loopStart = region.start;
+  source.loopEnd = region.end;
+  source.playbackRate.value = rate;
+  source.connect(destination);
+  source.start(at, region.start);
+  return source;
+}
+
+const RENDER_SAMPLE_RATE = 44100;
+
+/** Renders `seconds` of tape phasing offline, for export (v0.4). */
+export async function renderTape(
+  buffer: AudioBuffer,
+  region: TapeRegion,
+  rateB: number,
+  seconds: number,
+): Promise<RenderedAudio> {
+  const context = new OfflineAudioContext(2, Math.round(seconds * RENDER_SAMPLE_RATE), RENDER_SAMPLE_RATE);
+  const [a, b] = createMix(context);
+  startLoop(context, buffer, region, 1, a, 0);
+  startLoop(context, buffer, region, rateB, b, 0);
+  const rendered = await context.startRendering();
+  return {
+    channels: [rendered.getChannelData(0), rendered.getChannelData(1)],
+    sampleRate: RENDER_SAMPLE_RATE,
+  };
+}
+
 function setAudioSession(type: string) {
   // iOS: recording needs 'play-and-record'; playback should ignore the silent switch.
   const audioSession = (navigator as { audioSession?: { type: string } }).audioSession;
@@ -49,15 +103,7 @@ export function createTapeSession(): TapeSession {
   const context = new AudioContext({ latencyHint: 'interactive' });
   void context.resume();
 
-  const output = context.createGain();
-  output.gain.value = 0.8;
-  output.connect(context.destination);
-  const panners = [-PAN, PAN].map((pan) => {
-    const panner = context.createStereoPanner();
-    panner.pan.value = pan;
-    panner.connect(output);
-    return panner;
-  });
+  const panners = createMix(context);
 
   let loops: [Loop, Loop] | null = null;
 
@@ -113,18 +159,11 @@ export function createTapeSession(): TapeSession {
       stop();
       void context.resume();
       const at = context.currentTime + START_DELAY;
-      const make = (rate: number, panner: StereoPannerNode): Loop => {
-        const source = context.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
-        source.loopStart = region.start;
-        source.loopEnd = region.end;
-        source.playbackRate.value = rate;
-        source.connect(panner);
-        source.start(at, region.start);
-        return { source, segments: [{ time: at, position: 0, rate }] };
-      };
-      loops = [make(1, panners[0]!), make(rateB, panners[1]!)];
+      const make = (rate: number, panner: StereoPannerNode): Loop => ({
+        source: startLoop(context, buffer, region, rate, panner, at),
+        segments: [{ time: at, position: 0, rate }],
+      });
+      loops = [make(1, panners[0]), make(rateB, panners[1])];
     },
 
     setRateB(rate) {

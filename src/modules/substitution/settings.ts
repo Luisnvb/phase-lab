@@ -5,6 +5,7 @@ import { activeIndices } from '../../core/pattern.ts';
 import { completeOrder, partialPattern } from '../../core/substitution.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { FillOrderMode, Pattern, VoiceConfig, VoiceId } from '../../core/types.ts';
+import type { UrlSchema } from '../../core/url-state.ts';
 
 export type SubstitutionSettings = {
   readonly bpm: number;
@@ -63,3 +64,15 @@ export function voiceConfig(
     ...twoVoiceMix(settings.twoVoices, voice),
   };
 }
+
+/** Settings shared by URL (v0.4). */
+export const URL_SCHEMA: UrlSchema<SubstitutionSettings> = {
+  bpm: { key: 'bpm', type: 'number', ...LIMITS.bpm, integer: true },
+  repetitions: { key: 'm', type: 'number', ...LIMITS.repetitions, integer: true },
+  target: { key: 'patron', type: 'rhythm', length: 12 },
+  orderMode: { key: 'orden', type: 'choice', values: ['ltr', 'random', 'custom'] },
+  seed: { key: 'semilla', type: 'number', min: 0, max: 2 ** 31, integer: true },
+  customPrefix: { key: 'pasos', type: 'indices', max: 11 },
+  twoVoices: { key: 'dos', type: 'boolean' },
+  offset: { key: 'desfase', type: 'number', ...LIMITS.offset, integer: true },
+};

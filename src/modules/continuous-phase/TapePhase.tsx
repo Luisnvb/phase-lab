@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Slider } from '../../components/Controls.tsx';
+import { ShareExport } from '../../components/ShareExport.tsx';
 import { TapeRings } from '../../components/TapeRings.tsx';
 import { Transport } from '../../components/Transport.tsx';
 import { waveformPeaks } from '../../core/tape.ts';
-import { createTapeSession, type TapeRegion, type TapeSession } from '../../engine/tape.ts';
+import {
+  createTapeSession,
+  renderTape,
+  type TapeRegion,
+  type TapeSession,
+} from '../../engine/tape.ts';
 import type { PlaybackStatus } from '../../state/use-audio-runtime.ts';
 import styles from '../../styles/module-layout.module.css';
 import { LIMITS } from './settings.ts';
@@ -237,6 +243,14 @@ export default function TapePhase() {
           >
             Reiniciar al unísono
           </button>
+          {buffer && (
+            <ShareExport
+              filename="desfase-con-cinta"
+              shareable={false}
+              render={(seconds) => renderTape(buffer, region, rateB, seconds)}
+              note="El audio exportado se genera en tu navegador. La grabación no se puede compartir por enlace."
+            />
+          )}
         </section>
       </div>
 

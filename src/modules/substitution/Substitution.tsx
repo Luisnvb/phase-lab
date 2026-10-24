@@ -2,34 +2,31 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BuildRows } from '../../components/BuildRows.tsx';
 import { Checkbox, Choice, Slider } from '../../components/Controls.tsx';
 import { PatternEditor } from '../../components/PatternEditor.tsx';
+import { ShareExport } from '../../components/ShareExport.tsx';
 import { moveColumnCursor } from '../../components/stage-matrix-geometry.ts';
 import { Transport } from '../../components/Transport.tsx';
 import { twoVoiceMix } from '../../core/mix.ts';
 import { activeIndices, toggleStep } from '../../core/pattern.ts';
 import { positionAt } from '../../core/phase.ts';
-import {
-  createBuildProcess,
-  type BuildDirection,
-  type BuildInfo,
-  type BuildProcess,
-} from '../../core/substitution.ts';
+import type { BuildDirection, BuildInfo, BuildProcess } from '../../core/substitution.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { FillOrderMode } from '../../core/types.ts';
-import type { AudioRuntime } from '../../engine/audio-runtime.ts';
+import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
 import { eventsAround } from '../../engine/timeline.ts';
 import { useAnimationFrame } from '../../state/use-animation-frame.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
 import { useReducedMotion } from '../../state/use-reduced-motion.ts';
+import { useUrlSettings } from '../../state/use-url-settings.ts';
 import styles from '../../styles/module-layout.module.css';
-import { driveBuildProcess } from './process-driver.ts';
 import {
   buildOrder,
   DEFAULT_SETTINGS,
   LIMITS,
   totalBeats,
-  voiceConfig,
+  URL_SCHEMA,
   type SubstitutionSettings,
 } from './settings.ts';
+import { INITIAL_COUNT, setupSubstitution } from './setup.ts';
 
 const ORDER_OPTIONS = [
   { value: 'ltr', label: 'De izquierda a derecha' },
@@ -37,10 +34,8 @@ const ORDER_OPTIONS = [
   { value: 'custom', label: 'Personalizado' },
 ] as const satisfies readonly { value: FillOrderMode; label: string }[];
 
-const INITIAL_COUNT = 1;
-
 export default function Substitution() {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const settingsRef = useRef(settings);
   useEffect(() => {
     settingsRef.current = settings;
@@ -70,25 +65,15 @@ export default function Substitution() {
   // Runs before every start: a fresh process, attached before the first cycle.
   const configure = useCallback(
     (runtime: AudioRuntime) => {
-      const current = settingsRef.current;
-      const process = createBuildProcess({
-        total: totalBeats(current.target),
-        repetitions: current.repetitions,
-        direction: directionRef.current,
-        initialCount: directionRef.current === 'build' ? INITIAL_COUNT : totalBeats(current.target),
-      });
-      processRef.current = process;
-      const count = process.infoAt(0)!.count;
-      runtime.setVoice(voiceConfig(current, 'A', count));
-      runtime.setVoice(voiceConfig(current, 'B', count));
-      runtime.engine.setPatternOffset('B', current.offset);
       detachRef.current?.();
-      detachRef.current = driveBuildProcess(
-        runtime.engine,
-        process,
-        current.target.steps.length,
-        (voice, beats) => voiceConfig(settingsRef.current, voice, beats),
+      const { process, detach } = setupSubstitution(
+        runtime,
+        settingsRef.current,
+        directionRef.current,
+        () => settingsRef.current,
       );
+      processRef.current = process;
+      detachRef.current = detach;
       showInfo(null);
     },
     [showInfo],
@@ -286,6 +271,12 @@ export default function Substitution() {
               onChange={setShowResultant}
             />
           )}
+          <ShareExport
+            filename="sustitucion"
+            render={(seconds) =>
+              renderOffline((runtime) => setupSubstitution(runtime, settings, direction), seconds)
+            }
+          />
         </section>
       </div>
 

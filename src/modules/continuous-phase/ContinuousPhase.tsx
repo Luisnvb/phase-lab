@@ -1,20 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Checkbox, Choice, Slider } from '../../components/Controls.tsx';
 import { PhaseRings } from '../../components/PhaseRings.tsx';
+import { ShareExport } from '../../components/ShareExport.tsx';
 import { Transport } from '../../components/Transport.tsx';
-import type { AudioRuntime } from '../../engine/audio-runtime.ts';
+import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
+import { useUrlSettings } from '../../state/use-url-settings.ts';
 import styles from '../../styles/module-layout.module.css';
 import {
   DEFAULT_SETTINGS,
   LIMITS,
   patternFor,
   pulseSourceFor,
+  URL_SCHEMA,
   voiceConfigs,
   type ContinuousPhaseSettings,
   type Material,
   type PhaseMode,
 } from './settings.ts';
+import { setupContinuousPhase } from './setup.ts';
 
 const percentFormat = new Intl.NumberFormat('es-ES', {
   minimumFractionDigits: 1,
@@ -36,7 +40,7 @@ function applyVoices(runtime: AudioRuntime, settings: ContinuousPhaseSettings): 
 }
 
 export default function ContinuousPhase() {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const [showResultant, setShowResultant] = useState(false);
   const settingsRef = useRef(settings);
   useEffect(() => {
@@ -44,8 +48,7 @@ export default function ContinuousPhase() {
   }, [settings]);
 
   const configure = useCallback((runtime: AudioRuntime) => {
-    applyVoices(runtime, settingsRef.current);
-    runtime.engine.setPulseSource('B', pulseSourceFor(settingsRef.current));
+    setupContinuousPhase(runtime, settingsRef.current);
   }, []);
   const { runtime, status, toggle, restart } = useAudioRuntime(configure);
 
@@ -139,6 +142,12 @@ export default function ContinuousPhase() {
           >
             Reiniciar al unísono
           </button>
+          <ShareExport
+            filename="desfase-continuo"
+            render={(seconds) =>
+              renderOffline((runtime) => setupContinuousPhase(runtime, settings), seconds)
+            }
+          />
         </section>
       </div>
 

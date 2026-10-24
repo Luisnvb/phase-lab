@@ -1,6 +1,8 @@
 import type * as Tone from 'tone';
 import type { InstrumentId, VoiceConfig, VoiceId } from '../core/types.ts';
-import { createEngine, type Engine } from './engine.ts';
+import { trimTrailingSilence } from '../core/wav.ts';
+import { createEngine, type Engine, type EngineOptions } from './engine.ts';
+import { createFakeClock } from './fake-clock.ts';
 import { createInstrument, type Instrument } from './instruments.ts';
 
 /** An AudioContext, the engine driving it, and one channel per voice. */
@@ -26,6 +28,8 @@ export type AudioRuntime = {
   dispose(): Promise<void>;
 };
 
+type ToneModule = typeof Tone;
+
 type Channel = {
   instrumentId: InstrumentId;
   instrument: Instrument;
@@ -33,39 +37,21 @@ type Channel = {
   gain: Tone.Gain;
 };
 
+type Voices = Pick<AudioRuntime, 'engine' | 'setVoice' | 'setMix' | 'setSoloResultant'> & {
+  disposeChannels(): void;
+};
+
 /**
- * Must be called from a user gesture handler (SPEC §4.4): the AudioContext is
- * created and resumed synchronously, before the first `await`, so that
- * browsers with strict autoplay rules (iOS Safari) accept it.
+ * The engine plus one Tone channel per voice, on Tone's current context. Shared
+ * by live playback and offline rendering, so both sound exactly the same.
  */
-export async function createAudioRuntime(): Promise<AudioRuntime> {
-  // iOS: play through the ring/silent switch, like a media app (Safari 16.4+).
-  const audioSession = (navigator as { audioSession?: { type: string } }).audioSession;
-  if (audioSession) audioSession.type = 'playback';
-
-  const context = new AudioContext({ latencyHint: 'interactive' });
-  const resumed = context.resume();
-
-  // Loaded lazily: Tone is only needed once there is sound.
-  const T = await import('tone');
-  const toneContext = new T.Context(context);
-  T.setContext(toneContext);
-  await resumed;
-
+function createVoices(T: ToneModule, engineOptions: Omit<EngineOptions, 'play'>): Voices {
   const channels = new Map<VoiceId, Channel>();
   let resultantChannel: Channel | null = null;
   let soloResultant = false;
-  // Set while we suspend the context ourselves, to tell it apart from interruptions.
-  let pausedByUser = false;
 
   const engine = createEngine({
-    clock: () => context.currentTime,
-    // outputLatency is missing in some browsers (Safari).
-    outputLatency: () => context.outputLatency || context.baseLatency || 0,
-    resume: () => {
-      pausedByUser = false;
-      return context.resume();
-    },
+    ...engineOptions,
     play: (event, step, voice) => {
       const channel = soloResultant ? resultantChannel : channels.get(voice.id);
       // By default notes ring for most of the step, so fast tempos do not pile up voices.
@@ -119,6 +105,54 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
       soloResultant = enabled;
     },
 
+    disposeChannels() {
+      engine.stop();
+      for (const channel of channels.values()) disposeChannel(channel);
+      channels.clear();
+      if (resultantChannel) disposeChannel(resultantChannel);
+      resultantChannel = null;
+    },
+  };
+}
+
+/**
+ * Must be called from a user gesture handler (SPEC §4.4): the AudioContext is
+ * created and resumed synchronously, before the first `await`, so that
+ * browsers with strict autoplay rules (iOS Safari) accept it.
+ */
+export async function createAudioRuntime(): Promise<AudioRuntime> {
+  // iOS: play through the ring/silent switch, like a media app (Safari 16.4+).
+  const audioSession = (navigator as { audioSession?: { type: string } }).audioSession;
+  if (audioSession) audioSession.type = 'playback';
+
+  const context = new AudioContext({ latencyHint: 'interactive' });
+  const resumed = context.resume();
+
+  // Loaded lazily: Tone is only needed once there is sound.
+  const T = await import('tone');
+  const toneContext = new T.Context(context);
+  T.setContext(toneContext);
+  await resumed;
+
+  // Set while we suspend the context ourselves, to tell it apart from interruptions.
+  let pausedByUser = false;
+
+  const voices = createVoices(T, {
+    clock: () => context.currentTime,
+    // outputLatency is missing in some browsers (Safari).
+    outputLatency: () => context.outputLatency || context.baseLatency || 0,
+    resume: () => {
+      pausedByUser = false;
+      return context.resume();
+    },
+  });
+
+  return {
+    engine: voices.engine,
+    setVoice: voices.setVoice,
+    setMix: voices.setMix,
+    setSoloResultant: voices.setSoloResultant,
+
     pause() {
       pausedByUser = true;
       return context.suspend();
@@ -140,14 +174,57 @@ export async function createAudioRuntime(): Promise<AudioRuntime> {
     },
 
     async dispose() {
-      engine.stop();
-      for (const channel of channels.values()) disposeChannel(channel);
-      channels.clear();
-      if (resultantChannel) disposeChannel(resultantChannel);
-      resultantChannel = null;
+      voices.disposeChannels();
       // Tone's wrapper closes the AudioContext; dispose() then stops its own ticker.
       await toneContext.close();
       toneContext.dispose();
     },
+  };
+}
+
+/** Rendered audio: one array of samples per channel. */
+export type RenderedAudio = { channels: Float32Array[]; sampleRate: number };
+
+const RENDER_SAMPLE_RATE = 44100;
+
+/**
+ * Renders `seconds` of a module offline, faster than real time (v0.4: export
+ * audio). `setup` is the same function the module uses before live playback,
+ * so the export sounds exactly like what is heard. The engine runs on a
+ * simulated clock that is stepped through the whole duration before Tone
+ * renders; silence after a process ends is trimmed.
+ */
+export async function renderOffline(
+  setup: (runtime: AudioRuntime) => void,
+  seconds: number,
+): Promise<RenderedAudio> {
+  const T = await import('tone');
+  const rendered = await T.Offline(
+    async () => {
+      const fake = createFakeClock();
+      const voices = createVoices(T, { clock: fake.clock, timer: fake.timer });
+      setup({
+        engine: voices.engine,
+        setVoice: voices.setVoice,
+        setMix: voices.setMix,
+        setSoloResultant: voices.setSoloResultant,
+        pause: async () => {},
+        resume: async () => {},
+        onSystemStateChange: () => () => {},
+        dispose: async () => voices.disposeChannels(),
+      });
+      await voices.engine.start();
+      // Schedule every note of the duration now; Tone renders them afterwards.
+      fake.advance(seconds);
+      voices.engine.stop();
+    },
+    seconds,
+    2,
+    RENDER_SAMPLE_RATE,
+  );
+  const channels = [0, 1].map((c) => rendered.getChannelData(c));
+  return {
+    channels: trimTrailingSilence(channels, RENDER_SAMPLE_RATE),
+    sampleRate: RENDER_SAMPLE_RATE,
   };
 }
