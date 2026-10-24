@@ -4,7 +4,7 @@ App web educativa para explorar técnicas de organización del tiempo de la mús
 
 Cada módulo combina sonido generado en tiempo real, una visualización sincronizada con precisión y pocos controles: **el proceso se oye y se ve mientras sucede**.
 
-**Pruébala:** https://luisnvb.github.io/phase-lab/
+**Pruébala:** https://luisnvb.dev/phase-lab/
 
 ## Módulos
 
