@@ -37,7 +37,7 @@ Principio guía: **el proceso debe ser audible y visible mientras sucede**. Cada
 
 | Área | Elección | Motivo |
 |---|---|---|
-| Build | Vite 5 | Arranque rápido, sin configuración |
+| Build | Vite 8 | Arranque rápido, sin configuración |
 | Lenguaje | TypeScript estricto | Lógica temporal propensa a errores sutiles |
 | UI | React 18 | Componentes por módulo |
 | Audio | Web Audio API + Tone.js **solo para instrumentos** | Ver 4.1: el transporte de Tone.js no sirve para voces con periodos independientes |
@@ -49,7 +49,7 @@ Principio guía: **el proceso debe ser audible y visible mientras sucede**. Cada
 
 Idioma de la interfaz: español. Código, nombres y comentarios: inglés.
 
-Versiones fijadas exactas en `package.json`. Vite 5 y Vitest 2 porque el entorno local usa Node 21, que Vite 6+ y Vitest 3+ no admiten (ver §10).
+Versiones fijadas exactas en `package.json`. Vite 8 y Vitest 5, que requieren Node ≥ 22.12 (campo `engines`; ver §10).
 
 ---
 
@@ -322,7 +322,7 @@ docs/              # captura para el README
 - **Decidido:** N fijo en 12 en la interfaz; el modelo y el motor admiten longitudes variables (la aumentación ya las usa).
 - **Decidido:** CSS Modules (M0).
 - **iOS y grabación:** la sesión de audio pasa a `play-and-record` mientras se graba y vuelve a `playback`; cada navegador graba en un formato distinto. Riesgo principal sin probar.
-- **Dependencias de desarrollo:** `npm audit` señala vulnerabilidades en Vite, Vitest y sus dependencias (solo herramientas de desarrollo; la app publicada no tiene ninguna). Corregirlas exige Vite 8 y Vitest 5, que requieren Node ≥ 22; el entorno local usa Node 21.
+- **Dependencias de desarrollo:** resuelto el 25 de octubre de 2026 al pasar a Node 22, Vite 8, Vitest 5 y `@vitejs/plugin-react` 6; `npm audit` ya no señala vulnerabilidades. Vite 8 empaqueta con Rolldown; la configuración no necesitó cambios.
 
 ---
 
@@ -337,7 +337,6 @@ docs/              # captura para el README
    - **Firefox y Safari de escritorio:** los cinco módulos, la cinta y la exportación.
 2. **Comprobaciones de oído:** que cursor y sonido no se separen tras 5 minutos (módulo 1); que los WAV exportados suenen como la reproducción; el equilibrio entre órgano y maraca (aumentación) y el timbre de «solo resultante».
 3. **Botón «Copiar enlace»:** sin probar (se evitó sobrescribir el portapapeles). En iOS puede requerir que la página tenga el foco.
-4. **Actualizar Node a ≥ 22** en el entorno local y, después, Vite 8 y Vitest 5, para resolver las vulnerabilidades de las herramientas de desarrollo (§10). La integración continua ya usa Node 22.
 
 ### Limitaciones conocidas (menores)
 - Al reiniciar al unísono pueden solaparse hasta ~50 ms de notas ya programadas.

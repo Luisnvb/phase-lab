@@ -30,7 +30,7 @@ Usa auriculares o altavoces estéreo: las voces suenan a cada lado.
 
 ## Desarrollo
 
-Requiere Node.js 18 o superior.
+Requiere Node.js 22.12 o superior.
 
 ```sh
 npm install
