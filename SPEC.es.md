@@ -357,7 +357,6 @@ docs/              # captura para el README
 - En la sustitución, si se cambia el orden durante la reproducción, los números de turno se actualizan antes que el sonido (menos de un ciclo).
 - No hay tests de componentes de interfaz; solo de la lógica pura, el motor y los procesos.
 - En GitHub pueden quedar en caché los commits anteriores a la reescritura del correo (inaccesibles sin conocer su identificador).
-- La captura del README muestra la interfaz en español (v0.5).
 
 ### Ideas para una posible versión 0.6 (por decidir)
 - Seleccionar un subconjunto de la resultante para aislar una línea emergente (previsto como «posterior» en §5).

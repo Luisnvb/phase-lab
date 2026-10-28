@@ -357,7 +357,6 @@ docs/              # screenshot for the README
 - In substitution, if the order is changed during playback, the turn numbers update before the sound (less than one cycle).
 - No interface component tests; only of the pure logic, the engine and the processes.
 - GitHub may keep cached commits from before the email rewrite (inaccessible without knowing their identifier).
-- The README screenshot shows the Spanish interface (v0.5).
 
 ### Ideas for a possible version 0.6 (to be decided)
 - Select a subset of the resultant to isolate an emerging line (planned as "later" in §5).
