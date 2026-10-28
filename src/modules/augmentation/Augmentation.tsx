@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Choice, Slider } from '../../components/Controls.tsx';
 import { PianoRoll } from '../../components/PianoRoll.tsx';
 import { movePianoRollCursor } from '../../components/piano-roll-geometry.ts';
+import { PitchListEditor } from '../../components/PitchListEditor.tsx';
 import { ShareExport } from '../../components/ShareExport.tsx';
 import { Transport } from '../../components/Transport.tsx';
 import {
+  chordTexture,
   cycleLength,
   initialChord,
   type AugmentationCycle,
@@ -12,9 +14,12 @@ import {
   type AugmentMode,
 } from '../../core/augmentation.ts';
 import { stepAt } from '../../core/phase.ts';
+import { EDITABLE_PITCHES } from '../../core/pitch.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
 import { eventsAround } from '../../engine/timeline.ts';
+import { formatDecimal } from '../../i18n/format.ts';
+import { useMessages } from '../../i18n/messages.ts';
 import { useAnimationFrame } from '../../state/use-animation-frame.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
 import { useReducedMotion } from '../../state/use-reduced-motion.ts';
@@ -22,6 +27,7 @@ import { useUrlSettings } from '../../state/use-url-settings.ts';
 import styles from '../../styles/module-layout.module.css';
 import {
   amountFor,
+  chordPitches,
   DEFAULT_SETTINGS,
   LIMITS,
   MAX_CYCLE,
@@ -31,19 +37,12 @@ import {
 } from './settings.ts';
 import { setupAugmentation } from './setup.ts';
 
-const MODE_OPTIONS = [
-  { value: 'factor', label: 'Por un factor' },
-  { value: 'pulses', label: 'Por pulsos' },
-] as const satisfies readonly { value: AugmentMode; label: string }[];
-
-const factorFormat = new Intl.NumberFormat('es-ES', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+const MODES: readonly AugmentMode[] = ['factor', 'pulses'];
 
 type Shown = { cycle: number; data: AugmentationCycle };
 
 export default function Augmentation() {
+  const { t, locale } = useMessages();
   const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const settingsRef = useRef(settings);
   useEffect(() => {
@@ -80,7 +79,7 @@ export default function Augmentation() {
   );
   const { runtime, status, toggle, finish } = useAudioRuntime(configure);
 
-  const { bpm, size, mode } = settings;
+  const { bpm, size, chord, mode } = settings;
   const amount = amountFor(settings);
   useEffect(() => {
     runtime?.engine.setPulseDuration('A', pulseDuration(bpm));
@@ -117,34 +116,33 @@ export default function Augmentation() {
   const update = <K extends keyof AugmentationSettings>(key: K, value: AugmentationSettings[K]) =>
     setSettings((current) => ({ ...current, [key]: value }));
 
-  const original = useMemo(() => initialChord(size), [size]);
+  const original = useMemo(() => initialChord(chordPitches({ chord, size })), [chord, size]);
   const running = status === 'playing' || status === 'paused';
   // Once ended, the last cycle stays on screen.
   const current = (running || status === 'ended') && shown ? shown.data : null;
   const notes = current ? current.notes : original;
   const length = current ? current.length : cycleLength(original, MIN_CYCLE);
 
-  let indicator = `Ciclo 1 · ${length} pulsos`;
-  if (status === 'ended') indicator = 'Proceso terminado: el acorde ya no cabe en el ciclo más largo';
-  else if (running && shown) indicator = `Ciclo ${shown.cycle + 1} · ${length} pulsos`;
+  let indicator = t.augmentation.cycle(1, length);
+  if (status === 'ended') indicator = t.augmentation.ended;
+  else if (running && shown) indicator = t.augmentation.cycle(shown.cycle + 1, length);
 
   return (
     <article className={styles.module}>
       <header className={styles.intro}>
-        <h2>Aumentación</h2>
-        <p>
-          Sobre un pulso que no cambia, las notas de un acorde se alargan un poco en cada ciclo.
-          Al principio suenan como golpes cortos, uno tras otro; poco a poco se solapan y se
-          convierten en un acorde sostenido, y el ciclo se estira con ellas. Para escuchar:{' '}
-          <cite>Four Organs</cite> (1970).
-        </p>
+        <h2>{t.modules.augmentation.title}</h2>
+        <p>{t.augmentation.intro}</p>
+        <details className={styles.guide}>
+          <summary>{t.augmentation.guide.summary}</summary>
+          {t.augmentation.guide.body}
+        </details>
       </header>
 
       <div className={styles.layout}>
         <div className={styles.visual}>
           <p className={styles.indicator}>{indicator}</p>
           <span className="visually-hidden" role="status">
-            {status === 'ended' ? '' : running && shown ? `Ciclo de ${length} pulsos` : ''}
+            {status === 'ended' ? '' : running && shown ? t.augmentation.announce(length) : ''}
           </span>
           <PianoRoll
             notes={notes}
@@ -154,30 +152,31 @@ export default function Augmentation() {
             cursorRef={cursorRef}
             showCursor={running}
           />
-          <p className={styles.legend}>
-            Barra: duración actual de cada nota. Contorno discontinuo: duración inicial. Línea
-            discontinua gruesa: final del ciclo.
+          {/* Changes only twice in a whole process, so it can be announced. */}
+          <p className={styles.texture} aria-live="polite">
+            {t.augmentation.textures[chordTexture(notes)]}
           </p>
+          <p className={styles.legend}>{t.augmentation.legend}</p>
         </div>
 
-        <section className={styles.controls} aria-label="Controles">
+        <section className={styles.controls} aria-label={t.controls.region}>
           <Choice
-            label="Alargar las notas"
+            label={t.augmentation.mode}
             value={mode}
-            options={MODE_OPTIONS}
+            options={MODES.map((value) => ({ value, label: t.augmentation.modes[value] }))}
             onChange={(value) => update('mode', value)}
           />
           {mode === 'factor' ? (
             <Slider
-              label="Factor por ciclo"
+              label={t.augmentation.factor}
               value={settings.factor}
               {...LIMITS.factor}
-              format={(value) => `× ${factorFormat.format(value)}`}
+              format={(value) => `× ${formatDecimal(locale, value, 2)}`}
               onChange={(value) => update('factor', value)}
             />
           ) : (
             <Slider
-              label="Pulsos más por ciclo"
+              label={t.augmentation.pulses}
               value={settings.pulses}
               {...LIMITS.pulses}
               format={(value) => `+ ${value}`}
@@ -185,26 +184,40 @@ export default function Augmentation() {
             />
           )}
           <Slider
-            label="Notas del acorde"
+            label={t.augmentation.size}
             value={size}
             {...LIMITS.size}
             format={(value) => `${value}`}
             onChange={(value) => update('size', value)}
             disabled={running}
           />
+          {/* The process is built from the chord at the start, so it is fixed while running. */}
+          <PitchListEditor
+            legend={t.pitchEditor.chord}
+            notes={chord.slice(0, size)}
+            pitches={EDITABLE_PITCHES}
+            itemLabel={t.pitchEditor.note}
+            onChange={(index, note) =>
+              note !== null && update('chord', chord.map((current, i) => (i === index ? note : current)))
+            }
+            onReset={() => update('chord', DEFAULT_SETTINGS.chord)}
+            resetLabel={t.pitchEditor.resetChord}
+            disabled={running}
+            {...(running && { hint: t.pitchEditor.lockedWhilePlaying })}
+          />
           <Slider
-            label="Tempo (negras por minuto)"
+            label={t.controls.tempo}
             value={bpm}
             {...LIMITS.bpm}
             format={(value) => `${value}`}
             onChange={(value) => update('bpm', value)}
           />
           <ShareExport
-            filename="aumentacion"
+            filename={t.augmentation.filename}
             render={(seconds) =>
               renderOffline((runtime) => setupAugmentation(runtime, settings), seconds)
             }
-            note="Si el proceso termina antes, el audio acaba con él."
+            note={t.share.endsEarly}
           />
         </section>
       </div>

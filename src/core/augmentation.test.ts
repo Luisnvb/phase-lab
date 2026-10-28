@@ -2,15 +2,19 @@ import { describe, expect, test } from 'vitest';
 import {
   augmentOnce,
   chordPattern,
+  chordTexture,
   createAugmentationProcess,
   cycleLength,
   initialChord,
   type AugmentationOptions,
 } from './augmentation.ts';
 
+const CHORD = ['D4', 'A4', 'E5', 'G5'];
+const chord = (size: number, length?: number) => initialChord(CHORD.slice(0, size), length);
+
 describe('augmentation helpers', () => {
-  test('the chord enters one note per pulse', () => {
-    expect(initialChord(3)).toEqual([
+  test('the chord enters one note per pulse, in the given order', () => {
+    expect(chord(3)).toEqual([
       { pitch: 'D4', onset: 0, length: 1 },
       { pitch: 'A4', onset: 1, length: 1 },
       { pitch: 'E5', onset: 2, length: 1 },
@@ -18,7 +22,7 @@ describe('augmentation helpers', () => {
   });
 
   test('augmentOnce multiplies or adds, without moving onsets', () => {
-    const notes = initialChord(2, 2);
+    const notes = chord(2, 2);
     expect(augmentOnce(notes, 'factor', 1.5).map((n) => [n.onset, n.length])).toEqual([
       [0, 3],
       [1, 3],
@@ -27,22 +31,31 @@ describe('augmentation helpers', () => {
   });
 
   test('cycleLength holds the longest note, with a minimum', () => {
-    expect(cycleLength(initialChord(4), 8)).toBe(8);
-    expect(cycleLength(initialChord(4, 6), 8)).toBe(9);
-    expect(cycleLength(initialChord(4, 6.2), 8)).toBe(10);
+    expect(cycleLength(chord(4), 8)).toBe(8);
+    expect(cycleLength(chord(4, 6), 8)).toBe(9);
+    expect(cycleLength(chord(4, 6.2), 8)).toBe(10);
     // Float noise right at a pulse does not add another pulse.
     expect(cycleLength([{ pitch: 'D4', onset: 0, length: 9 + 1e-12 }], 1)).toBe(9);
   });
 
   test('chordPattern places each note on its onset, with its length', () => {
-    const pattern = chordPattern(initialChord(3, 2.5), 6);
+    const pattern = chordPattern(chord(3, 2.5), 6);
     expect(pattern.steps.map((s) => s.active)).toEqual([true, true, true, false, false, false]);
     expect(pattern.steps[1]).toEqual({ active: true, pitch: 'A4', length: 2.5 });
+  });
+
+  test('chordTexture: separate notes, then overlapping, then all together', () => {
+    expect(chordTexture(chord(4, 1))).toBe('separate');
+    expect(chordTexture(chord(4, 1.5))).toBe('overlapping');
+    // The first note still rings when the last one (pulse 3) enters.
+    expect(chordTexture(chord(4, 3))).toBe('overlapping');
+    expect(chordTexture(chord(4, 3.2))).toBe('chord');
+    expect(chordTexture(chord(1))).toBe('chord');
   });
 });
 
 describe('createAugmentationProcess', () => {
-  const base: AugmentationOptions = { size: 3, mode: 'pulses', amount: 2, minimum: 4, maximum: 10 };
+  const base: AugmentationOptions = { pitches: CHORD.slice(0, 3), mode: 'pulses', amount: 2, minimum: 4, maximum: 10 };
 
   test('each cycle the notes get longer and the cycle stretches with them', () => {
     const process = createAugmentationProcess(base);

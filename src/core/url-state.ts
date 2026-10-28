@@ -12,7 +12,18 @@ export type FieldSpec =
   /** A pattern as `x` (active) and `.` (rest), e.g. `xx.x..x.xx..`. */
   | { readonly key: string; readonly type: 'rhythm'; readonly length: number }
   /** A list of step indices, e.g. `9-0-3`. */
-  | { readonly key: string; readonly type: 'indices'; readonly max: number };
+  | { readonly key: string; readonly type: 'indices'; readonly max: number }
+  /**
+   * A fixed-length list of pitches from `values`, e.g. `D4-Fs4-_-A4`: `s` stands
+   * for a sharp (`#` would need escaping) and `_` for a rest, if `rests` allows them.
+   */
+  | {
+      readonly key: string;
+      readonly type: 'pitches';
+      readonly length: number;
+      readonly values: readonly string[];
+      readonly rests?: boolean;
+    };
 
 export type UrlSchema<T> = { readonly [K in keyof T]?: FieldSpec };
 
@@ -24,6 +35,10 @@ function toText(value: unknown, field: FieldSpec): string {
       return (value as Pattern).steps.map((s) => (s.active ? 'x' : '.')).join('');
     case 'indices':
       return (value as readonly number[]).join('-');
+    case 'pitches':
+      return (value as readonly (string | null)[])
+        .map((pitch) => (pitch === null ? '_' : pitch.replace('#', 's')))
+        .join('-');
     default:
       return String(value);
   }
@@ -51,6 +66,12 @@ function fromText(text: string, field: FieldSpec): unknown {
       const values = text.split('-').map(Number);
       const valid = values.every((v) => Number.isInteger(v) && v >= 0 && v <= field.max);
       return valid ? values : undefined;
+    }
+    case 'pitches': {
+      const pitches = text.split('-').map((item) => (item === '_' ? null : item.replace('s', '#')));
+      if (pitches.length !== field.length) return undefined;
+      const valid = pitches.every((p) => (p === null ? field.rests === true : field.values.includes(p)));
+      return valid ? pitches : undefined;
     }
   }
 }

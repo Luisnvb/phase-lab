@@ -16,6 +16,8 @@ export type RingsFrame = {
   posB: number;
   /** Displayed offset in steps, already formatted. */
   offsetText: string;
+  /** Under the offset, e.g. "steps of offset". */
+  caption: string;
   /** Reduced motion: cursors jump from step to step instead of turning. */
   discrete: boolean;
   colors: RingColors;
@@ -208,5 +210,5 @@ export function drawPhaseRings(ctx: CanvasRenderingContext2D, size: number, fram
   ctx.fillText(frame.offsetText, center, center + size / 40);
   ctx.fillStyle = colors.muted;
   ctx.font = `${Math.round(size / 28)}px system-ui, sans-serif`;
-  ctx.fillText('pasos de desfase', center, center + size / 40 + size / 18);
+  ctx.fillText(frame.caption, center, center + size / 40 + size / 18);
 }

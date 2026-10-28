@@ -1,3 +1,4 @@
+import { useMessages } from '../i18n/messages.ts';
 import type { ModuleEntry } from '../modules/catalog.ts';
 import styles from './Home.module.css';
 
@@ -6,40 +7,34 @@ type Props = {
 };
 
 export function Home({ modules }: Props) {
+  const { t } = useMessages();
   return (
     <div className={styles.home}>
-      <p className={styles.lead}>
-        Técnicas para organizar el tiempo en la música de proceso: voces que se desfasan,
-        patrones que se construyen paso a paso y figuras que surgen de su superposición. Cada
-        módulo suena y se ve a la vez, mientras el proceso ocurre.
-      </p>
+      <p className={styles.lead}>{t.home.lead}</p>
 
       <ul className={styles.cards}>
         {modules.map((module) => (
           <li key={module.route}>
             {module.Component ? (
               <a href={`#/${module.route}`} className={styles.card}>
-                <h2 className={styles.cardTitle}>{module.title}</h2>
-                <p className={styles.summary}>{module.summary}</p>
+                <h2 className={styles.cardTitle}>{t.modules[module.id].title}</h2>
+                <p className={styles.summary}>{t.modules[module.id].summary}</p>
                 <span className={styles.action} aria-hidden="true">
-                  Abrir →
+                  {t.home.open}
                 </span>
               </a>
             ) : (
               <div className={`${styles.card} ${styles.upcoming}`}>
-                <h2 className={styles.cardTitle}>{module.title}</h2>
-                <p className={styles.summary}>{module.summary}</p>
-                <span className={styles.badge}>Próximamente</span>
+                <h2 className={styles.cardTitle}>{t.modules[module.id].title}</h2>
+                <p className={styles.summary}>{t.modules[module.id].summary}</p>
+                <span className={styles.badge}>{t.home.upcoming}</span>
               </div>
             )}
           </li>
         ))}
       </ul>
 
-      <p className={styles.note}>
-        Usa auriculares o altavoces estéreo: las dos voces suenan a cada lado. Con auriculares
-        inalámbricos el sonido puede llegar con algo de retraso respecto a la imagen.
-      </p>
+      <p className={styles.note}>{t.home.note}</p>
     </div>
   );
 }

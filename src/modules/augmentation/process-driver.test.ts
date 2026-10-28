@@ -4,13 +4,15 @@ import type { ScheduledEvent, Step } from '../../core/types.ts';
 import { createEngine } from '../../engine/engine.ts';
 import { createFakeClock } from '../../engine/fake-clock.ts';
 import { driveAugmentation } from './process-driver.ts';
-import { chordConfig, DEFAULT_SETTINGS, pulseConfig } from './settings.ts';
+import { chordConfig, chordPitches, DEFAULT_SETTINGS, pulseConfig } from './settings.ts';
 
 describe('augmentation (module 5)', () => {
   test('notes get longer each cycle, the pulse never changes, and both stop together', async () => {
-    const settings = { ...DEFAULT_SETTINGS, mode: 'pulses' as const, pulses: 3, size: 3 };
+    // An edited chord: the first `size` notes play, in their order of entry.
+    const chord = ['F#4', 'C4', 'B4', 'E5', 'G5'];
+    const settings = { ...DEFAULT_SETTINGS, mode: 'pulses' as const, pulses: 3, size: 3, chord };
     const process = createAugmentationProcess({
-      size: settings.size,
+      pitches: chordPitches(settings),
       mode: settings.mode,
       amount: settings.pulses,
       minimum: 4,
@@ -31,13 +33,14 @@ describe('augmentation (module 5)', () => {
 
     // Lengths 1, 4, 7, 10: cycles of 4, 6, 9, 12 pulses; the next (15) would not fit.
     expect(process.endCycle).toBe(4);
-    const chord = played.filter((p) => p.event.voice === 'A');
+    const chordNotes = played.filter((p) => p.event.voice === 'A');
     for (let cycle = 0; cycle < 4; cycle++) {
-      const notes = chord.filter((p) => p.event.cycleIndex === cycle);
+      const notes = chordNotes.filter((p) => p.event.cycleIndex === cycle);
       expect(notes.map((p) => p.event.stepIndex)).toEqual([0, 1, 2]);
       expect(notes.map((p) => p.step.length)).toEqual([1, 1, 1].map((l) => l + 3 * cycle));
+      expect(notes.map((p) => p.step.pitch)).toEqual(['F#4', 'C4', 'B4']);
     }
-    expect(chord.some((p) => p.event.cycleIndex >= 4)).toBe(false);
+    expect(chordNotes.some((p) => p.event.cycleIndex >= 4)).toBe(false);
 
     // The pulse plays every pulse, at the same rate, until the chord's last cycle ends.
     const pulses = played.filter((p) => p.event.voice === 'B');
@@ -47,7 +50,7 @@ describe('augmentation (module 5)', () => {
 
     // Each chord cycle starts on a pulse.
     const pulseTimes = new Set(pulses.map((p) => p.event.time.toFixed(9)));
-    chord
+    chordNotes
       .filter((p) => p.event.stepIndex === 0)
       .forEach((p) => expect(pulseTimes.has(p.event.time.toFixed(9))).toBe(true));
   });

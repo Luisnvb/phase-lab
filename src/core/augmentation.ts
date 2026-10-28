@@ -9,11 +9,28 @@ export type ChordNote = {
 
 export type AugmentMode = 'factor' | 'pulses';
 
-/** Original chord material on D; notes enter one pulse apart. */
-export const CHORD_PITCHES = ['D4', 'A4', 'E5', 'G5', 'C6'] as const;
+/** The chord before augmentation: notes enter one pulse apart, in the given order. */
+export function initialChord(pitches: readonly string[], length = 1): ChordNote[] {
+  return pitches.map((pitch, i) => ({ pitch, onset: i, length }));
+}
 
-export function initialChord(size: number, length = 1): ChordNote[] {
-  return CHORD_PITCHES.slice(0, size).map((pitch, i) => ({ pitch, onset: i, length }));
+/**
+ * What the chord sounds like in a cycle: notes one after another, notes that
+ * overlap their neighbours, or every note ringing together at some moment.
+ */
+export type ChordTexture = 'separate' | 'overlapping' | 'chord';
+
+export function chordTexture(notes: readonly ChordNote[]): ChordTexture {
+  if (notes.length < 2) return 'chord';
+  const lastOnset = Math.max(...notes.map((note) => note.onset));
+  const firstEnd = Math.min(...notes.map((note) => note.onset + note.length));
+  if (firstEnd > lastOnset + 1e-9) return 'chord';
+  const sorted = [...notes].sort((a, b) => a.onset - b.onset);
+  const overlaps = sorted.some((note, i) => {
+    const next = sorted[i + 1];
+    return next !== undefined && note.onset + note.length > next.onset + 1e-9;
+  });
+  return overlaps ? 'overlapping' : 'separate';
 }
 
 /** One augmentation step: every note gets longer by a factor or by a number of pulses. */
@@ -47,7 +64,8 @@ export function chordPattern(notes: readonly ChordNote[], steps: number): Patter
 }
 
 export type AugmentationOptions = {
-  readonly size: number;
+  /** Chord notes, in order of entry. */
+  readonly pitches: readonly string[];
   readonly mode: AugmentMode;
   readonly amount: number;
   /** Shortest cycle, in pulses. */
@@ -83,7 +101,7 @@ export type AugmentationProcess = {
  */
 export function createAugmentationProcess(initial: AugmentationOptions): AugmentationProcess {
   let options = { ...initial };
-  const first = initialChord(options.size);
+  const first = initialChord(options.pitches);
   const cycles: AugmentationCycle[] = [
     { notes: first, length: cycleLength(first, options.minimum), startPulse: 0 },
   ];

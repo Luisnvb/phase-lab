@@ -23,6 +23,11 @@ export default tseslint.config(
     },
   },
   {
+    // Interface texts: data with some JSX, not components; a full reload on edit is fine.
+    files: ['src/i18n/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
     // src/core must stay free of browser dependencies (CLAUDE.md).
     files: ['src/core/**/*.ts'],
     rules: {

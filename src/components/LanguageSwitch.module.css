@@ -1,0 +1,37 @@
+.switch {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.button {
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.button + .button {
+  border-left: 1px solid var(--color-border);
+}
+
+.button:hover {
+  color: var(--color-text);
+}
+
+/* Current language: filled and bold, not only a color change. */
+.button[aria-pressed='true'] {
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-weight: 600;
+}
+
+.button:focus-visible {
+  outline-offset: -3px;
+}

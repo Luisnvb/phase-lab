@@ -1,4 +1,5 @@
 import type { Pattern } from '../core/types.ts';
+import { useMessages } from '../i18n/messages.ts';
 import styles from './PatternEditor.module.css';
 
 type Props = {
@@ -9,9 +10,10 @@ type Props = {
 
 /** One checkbox per step; active steps are filled, rests are hollow. */
 export function PatternEditor({ pattern, onToggle, onReset }: Props) {
+  const { t } = useMessages();
   return (
     <fieldset className={styles.editor}>
-      <legend className={styles.legend}>Patrón</legend>
+      <legend className={styles.legend}>{t.patternEditor.legend}</legend>
       <div className={styles.cells}>
         {pattern.steps.map((step, i) => (
           <label key={i} className={styles.cell}>
@@ -20,7 +22,7 @@ export function PatternEditor({ pattern, onToggle, onReset }: Props) {
               className={styles.input}
               checked={step.active}
               onChange={() => onToggle(i)}
-              aria-label={`Paso ${i + 1}`}
+              aria-label={t.patternEditor.step(i + 1)}
             />
             <span className={styles.box} aria-hidden="true">
               {i + 1}
@@ -30,7 +32,7 @@ export function PatternEditor({ pattern, onToggle, onReset }: Props) {
       </div>
       {onReset && (
         <button type="button" className={styles.reset} onClick={onReset}>
-          Restaurar el patrón inicial
+          {t.patternEditor.reset}
         </button>
       )}
     </fieldset>

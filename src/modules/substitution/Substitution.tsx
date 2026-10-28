@@ -12,6 +12,7 @@ import type { BuildDirection, BuildInfo, BuildProcess } from '../../core/substit
 import { pulseDuration } from '../../core/tempo.ts';
 import type { FillOrderMode } from '../../core/types.ts';
 import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
+import { useMessages } from '../../i18n/messages.ts';
 import { eventsAround } from '../../engine/timeline.ts';
 import { useAnimationFrame } from '../../state/use-animation-frame.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
@@ -28,13 +29,10 @@ import {
 } from './settings.ts';
 import { INITIAL_COUNT, setupSubstitution } from './setup.ts';
 
-const ORDER_OPTIONS = [
-  { value: 'ltr', label: 'De izquierda a derecha' },
-  { value: 'random', label: 'Aleatorio' },
-  { value: 'custom', label: 'Personalizado' },
-] as const satisfies readonly { value: FillOrderMode; label: string }[];
+const ORDERS: readonly FillOrderMode[] = ['ltr', 'random', 'custom'];
 
 export default function Substitution() {
+  const { t } = useMessages();
   const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const settingsRef = useRef(settings);
   useEffect(() => {
@@ -129,24 +127,19 @@ export default function Substitution() {
 
   const running = status === 'playing' || status === 'paused';
   const count = running && info ? info.count : direction === 'build' ? INITIAL_COUNT : total;
-  let indicator = `Golpes: ${count} de ${total}`;
+  let indicator = t.substitution.beats(count, total);
   if (running && info) {
     // Full and empty patterns hold indefinitely, so repetitions are not counted there.
-    if (info.count === total) indicator += ' · patrón completo';
-    else if (info.count === 0) indicator = 'Silencio: todos los golpes retirados';
-    else indicator += ` · repetición ${info.repetition} de ${repetitions}`;
+    if (info.count === total) indicator += t.substitution.complete;
+    else if (info.count === 0) indicator = t.substitution.silence;
+    else indicator += t.substitution.repetition(info.repetition, repetitions);
   }
 
   return (
     <article className={styles.module}>
       <header className={styles.intro}>
-        <h2>Construcción por sustitución</h2>
-        <p>
-          Un ciclo vacío se va llenando: cada pocas repeticiones, un silencio se cambia por un
-          golpe del patrón objetivo, hasta completarlo. El oído reinterpreta el ciclo con cada
-          golpe nuevo. También puede hacerse al revés, retirando golpes. Con dos voces desfasadas,
-          la combinación crece de forma más compleja. Para escuchar: <cite>Drumming</cite> (1971).
-        </p>
+        <h2>{t.modules.substitution.title}</h2>
+        <p>{t.substitution.intro}</p>
       </header>
 
       <div className={styles.layout}>
@@ -162,20 +155,18 @@ export default function Substitution() {
             cursorRef={cursorRef}
             showCursor={running}
           />
-          <p className={styles.legend}>
-            Contorno discontinuo: golpe pendiente, con su turno. Relleno: golpe ya sustituido.
-          </p>
+          <p className={styles.legend}>{t.substitution.legend}</p>
         </div>
 
-        <section className={styles.controls} aria-label="Controles">
-          <div className={styles.buttons} role="group" aria-label="Dirección del proceso">
+        <section className={styles.controls} aria-label={t.controls.region}>
+          <div className={styles.buttons} role="group" aria-label={t.substitution.direction}>
             <button
               type="button"
               className={styles.secondary}
               aria-pressed={direction === 'build'}
               onClick={() => changeDirection('build')}
             >
-              Construir
+              {t.substitution.build}
             </button>
             <button
               type="button"
@@ -183,7 +174,7 @@ export default function Substitution() {
               aria-pressed={direction === 'unbuild'}
               onClick={() => changeDirection('unbuild')}
             >
-              Deshacer
+              {t.substitution.unbuild}
             </button>
           </div>
           <PatternEditor
@@ -192,9 +183,9 @@ export default function Substitution() {
             onReset={() => update('target', DEFAULT_SETTINGS.target)}
           />
           <Choice
-            label="Orden de sustitución"
+            label={t.substitution.order}
             value={settings.orderMode}
-            options={ORDER_OPTIONS}
+            options={ORDERS.map((value) => ({ value, label: t.substitution.orders[value] }))}
             onChange={(value) => update('orderMode', value)}
           />
           {settings.orderMode === 'random' && (
@@ -203,12 +194,12 @@ export default function Substitution() {
               className={styles.secondary}
               onClick={() => update('seed', settings.seed + 1)}
             >
-              Otro orden aleatorio
+              {t.substitution.anotherRandom}
             </button>
           )}
           {settings.orderMode === 'custom' && (
             <fieldset className={styles.picker}>
-              <legend>Pulsa los pasos en el orden deseado</legend>
+              <legend>{t.substitution.pickOrder}</legend>
               <div className={styles.buttons}>
                 {activeIndices(target).map((step) => {
                   const chosen = settings.customPrefix.includes(step);
@@ -226,38 +217,40 @@ export default function Substitution() {
                   );
                 })}
               </div>
-              <p className={styles.legend}>Orden: {order.map((step) => step + 1).join(' → ')}</p>
+              <p className={styles.legend}>
+                {t.substitution.orderList(order.map((step) => step + 1).join(' → '))}
+              </p>
               <button
                 type="button"
                 className={styles.secondary}
                 onClick={() => update('customPrefix', [])}
                 disabled={settings.customPrefix.length === 0}
               >
-                Borrar orden
+                {t.substitution.clearOrder}
               </button>
             </fieldset>
           )}
           <Slider
-            label="Repeticiones entre sustituciones"
+            label={t.substitution.repetitions}
             value={repetitions}
             {...LIMITS.repetitions}
             format={(value) => `${value}`}
             onChange={(value) => update('repetitions', value)}
           />
           <Slider
-            label="Tempo (negras por minuto)"
+            label={t.controls.tempo}
             value={bpm}
             {...LIMITS.bpm}
             format={(value) => `${value}`}
             onChange={(value) => update('bpm', value)}
           />
           <Checkbox
-            label="Dos voces"
+            label={t.substitution.twoVoices}
             checked={twoVoices}
             onChange={(value) => update('twoVoices', value)}
           />
           <Slider
-            label="Desfase de B (pasos)"
+            label={t.substitution.offset}
             value={offset}
             {...LIMITS.offset}
             format={(value) => `${value}`}
@@ -266,13 +259,13 @@ export default function Substitution() {
           />
           {twoVoices && (
             <Checkbox
-              label="Mostrar resultante"
+              label={t.controls.showResultant}
               checked={showResultant}
               onChange={setShowResultant}
             />
           )}
           <ShareExport
-            filename="sustitucion"
+            filename={t.substitution.filename}
             render={(seconds) =>
               renderOffline((runtime) => setupSubstitution(runtime, settings, direction), seconds)
             }

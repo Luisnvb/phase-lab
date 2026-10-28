@@ -1,69 +1,72 @@
-# Procesos — especificación funcional y técnica
+# Processes — functional and technical specification
 
-App web interactiva para explorar técnicas de organización del tiempo asociadas a la música de proceso de Steve Reich: desfase continuo, desfase por saltos, construcción por sustitución, patrones resultantes, ambigüedad métrica y aumentación.
+*English · [Español](SPEC.es.md). Both versions must be kept in sync.*
 
-Principio guía: **el proceso debe ser audible y visible mientras sucede**. Cada módulo combina sonido generado en tiempo real, una visualización sincronizada con precisión y pocos controles.
+An interactive web app for exploring the time-organization techniques associated with Steve Reich's process music: continuous phasing, stepped phasing, build-up by substitution, resultant patterns, metric ambiguity and augmentation.
 
-> **Estado (octubre de 2026):** versiones 0.1 a 0.4 implementadas y publicadas en https://luisnvb.dev/phase-lab/. Pendiente la prueba manual en Firefox, Safari de escritorio y móvil (criterio de M5, §9). Las decisiones tomadas durante la implementación aparecen marcadas como **Decidido**.
+Guiding principle: **the process must be audible and visible while it happens**. Every module combines sound generated in real time, a precisely synchronized visualization and a few controls.
 
----
-
-## 1. Objetivos y alcance
-
-### Objetivos
-- Que una persona sin formación musical entienda cada técnica en menos de dos minutos de uso.
-- Que una persona con formación pueda experimentar con sus propios patrones y parámetros.
-- Sincronía estricta entre sonido e imagen (desviación perceptible = fallo).
-
-### MVP (versión 0.1)
-- Motor de tiempo común (sección 4).
-- Módulo 1: Desfase continuo.
-- Módulo 2: Desfase por saltos.
-- Capa de patrones resultantes aplicable a ambos (versión básica).
-- Editor de patrones de 12 pulsos.
-
-### Versiones posteriores
-- 0.2: Módulo 3 (sustitución) y módulo 4 (ambigüedad 3 contra 2).
-- 0.3: Módulo 5 (aumentación) y variante "cinta" del módulo 1 (grabación por micrófono).
-- 0.4: Compartir configuraciones por URL, exportar audio.
-
-### Fuera de alcance
-- Grabaciones, partituras o fragmentos de obras de Reich. Todo el material por defecto es original y editable (ver sección 8).
-- Cuentas de usuario y backend. La app es 100 % cliente.
+> **Status (October 2026):** versions 0.1 to 0.4 published at https://luisnvb.dev/phase-lab/; 0.5 (languages, editable melody and chord, listening guide for augmentation) implemented. Manual testing in Firefox, desktop Safari and mobile is still pending (M5 criterion, §9). Decisions taken during implementation are marked **Decided**.
 
 ---
 
-## 2. Stack técnico
+## 1. Goals and scope
 
-| Área | Elección | Motivo |
+### Goals
+- Someone without musical training understands each technique in under two minutes of use.
+- Someone with training can experiment with their own patterns and parameters.
+- Strict sync between sound and picture (a perceptible deviation = failure).
+
+### MVP (version 0.1)
+- Shared time engine (section 4).
+- Module 1: Continuous phasing.
+- Module 2: Stepped phasing.
+- Resultant-pattern layer for both (basic version).
+- 12-pulse pattern editor.
+
+### Later versions
+- 0.2: Module 3 (substitution) and module 4 (3 against 2 ambiguity).
+- 0.3: Module 5 (augmentation) and the "tape" variant of module 1 (microphone recording).
+- 0.4: Share settings by URL, export audio.
+- 0.5: English (default) and Spanish interface; editable melody (module 1) and chord (augmentation); listening guide for augmentation.
+
+### Out of scope
+- Recordings, scores or excerpts of works by Reich. All default material is original and editable (see section 8).
+- User accounts and backend. The app is 100% client-side.
+
+---
+
+## 2. Technical stack
+
+| Area | Choice | Reason |
 |---|---|---|
-| Build | Vite 8 | Arranque rápido, sin configuración |
-| Lenguaje | TypeScript estricto | Lógica temporal propensa a errores sutiles |
-| UI | React 18 | Componentes por módulo |
-| Audio | Web Audio API + Tone.js **solo para instrumentos** | Ver 4.1: el transporte de Tone.js no sirve para voces con periodos independientes |
-| Gráficos | Canvas 2D para animación; SVG para editores y matrices | Rendimiento a 60 fps |
-| Estado | `useState` / `useReducer` de React | **Decidido:** Zustand no hizo falta |
-| Tests | Vitest | Lógica pura del motor y de los patrones |
-| Estilo | CSS Modules con variables CSS | **Decidido en M0** (frente a Tailwind): sin dependencias y encaja con un módulo por carpeta |
-| Despliegue | GitHub Actions → GitHub Pages | Lint, tests y build en cada push a `main` |
+| Build | Vite 8 | Fast start, no configuration |
+| Language | Strict TypeScript | Time logic is prone to subtle bugs |
+| UI | React 18 | One component per module |
+| Audio | Web Audio API + Tone.js **for instruments only** | See 4.1: Tone.js's transport does not work for voices with independent periods |
+| Graphics | Canvas 2D for animation; SVG for editors and matrices | 60 fps performance |
+| State | React `useState` / `useReducer` | **Decided:** Zustand was not needed |
+| Tests | Vitest | Pure logic of the engine and the patterns |
+| Styling | CSS Modules with CSS variables | **Decided in M0** (over Tailwind): no dependencies, fits one module per folder |
+| Deployment | GitHub Actions → GitHub Pages | Lint, tests and build on every push to `main` |
 
-Idioma de la interfaz: español. Código, nombres y comentarios: inglés.
+Interface languages: English (default) and Spanish (v0.5, §6). Code, names and comments: English.
 
-Versiones fijadas exactas en `package.json`. Vite 8 y Vitest 5, que requieren Node ≥ 22.12 (campo `engines`; ver §10).
+Exact versions pinned in `package.json`. Vite 8 and Vitest 5 require Node ≥ 22.12 (`engines` field; see §10).
 
 ---
 
-## 3. Modelo de datos
+## 3. Data model
 
 ```ts
-// Un patrón es un ciclo de pasos; cada paso puede sonar o no.
+// A pattern is a cycle of steps; each step sounds or not.
 type Step = {
   active: boolean;
   pitch?: string;
   velocity?: number;
-  length?: number;                           // duración en pasos (por defecto, casi un paso)
+  length?: number;                           // length in steps (default: just under one step)
 };
-type Pattern = { steps: Step[] };            // longitud por defecto: 12
+type Pattern = { steps: Step[] };            // default length: 12
 
 type VoiceId = 'A' | 'B';
 type InstrumentId = 'mallet' | 'click' | 'pianoish' | 'organ' | 'shaker';
@@ -71,65 +74,68 @@ type InstrumentId = 'mallet' | 'click' | 'pianoish' | 'organ' | 'shaker';
 type VoiceConfig = {
   id: VoiceId;
   pattern: Pattern;
-  pulseDuration: number;                     // segundos por paso
+  pulseDuration: number;                     // seconds per step
   instrument: InstrumentId;
   gain: number;                              // 0..1
   pan: number;                               // -1..1
 };
 
-// Evento ya programado en el reloj de audio.
+// An event already scheduled on the audio clock.
 type ScheduledEvent = {
   voice: VoiceId;
-  stepIndex: number;                         // índice dentro del patrón
-  cycleIndex: number;                        // nº de repetición del patrón
-  time: number;                              // AudioContext.currentTime en el que suena
+  stepIndex: number;                         // index within the pattern
+  cycleIndex: number;                        // pattern repetition number
+  time: number;                              // AudioContext.currentTime at which it sounds
   active: boolean;
 };
 ```
 
-### Funciones puras (en `src/core/`, todas con tests)
-- `rotate(pattern, k)`: desplaza el patrón k pasos (k puede ser negativo, se normaliza mod N).
-- `resultant(a, b)`: por cada paso devuelve `'none' | 'A' | 'B' | 'both'`. `stageMatrix(pattern)`: la resultante de las N + 1 etapas.
-- `phaseOffset(tA, tB, period)`: desfase en pasos (número real) entre dos voces dado su tiempo transcurrido. `phaseReadout`: desfase dentro del ciclo y vueltas completas. `nearestStage`: desfase entero más cercano.
-- `positionAt(events, voice, time, N)` y `stepAt(events, voice, time)`: posición de una voz interpolada entre sus eventos (§4.3); `stepAt` admite ciclos de longitud variable.
-- `fillOrder(pattern, mode, { seed?, custom? })`: orden de sustitución de silencios por golpes (`'ltr' | 'random' | 'custom'`).
-- `accentsFor(n, groupSize)`: índices acentuados para una agrupación dada. `accentPattern`: mismo patrón con velocidades de acento.
-- Procesos: `createPlateauSource` (mesetas), `createSteppedProcess` (etapas), `createBuildProcess` (sustitución), `createAugmentationProcess` (aumentación).
-- Cinta: `tapePositionAt`, `waveformPeaks`, `synthesizeSample`.
-- v0.4: `encodeState` / `decodeState` (ajustes ↔ URL), `encodeWav`, `trimTrailingSilence`.
+### Pure functions (in `src/core/`, all tested)
+- `melodicPattern(pitches)`: a pattern from pitches; `null` is a rest (v0.5).
+- `rotate(pattern, k)`: shifts the pattern k steps (k may be negative; normalized mod N).
+- `resultant(a, b)`: for each step returns `'none' | 'A' | 'B' | 'both'`. `stageMatrix(pattern)`: the resultant of the N + 1 stages.
+- `phaseOffset(tA, tB, period)`: offset in steps (a real number) between two voices given their elapsed time. `phaseReadout`: offset within the cycle and full laps. `nearestStage`: nearest whole offset.
+- `positionAt(events, voice, time, N)` and `stepAt(events, voice, time)`: a voice's position interpolated between its events (§4.3); `stepAt` supports cycles of varying length.
+- `fillOrder(pattern, mode, { seed?, custom? })`: order in which rests are replaced by beats (`'ltr' | 'random' | 'custom'`).
+- `accentsFor(n, groupSize)`: accented indices for a grouping. `accentPattern`: the same pattern with accent velocities.
+- Processes: `createPlateauSource` (plateaus), `createSteppedProcess` (stages), `createBuildProcess` (substitution), `createAugmentationProcess` (augmentation, with the chord's pitches as an option).
+- Augmentation: `initialChord(pitches)`, `chordTexture(notes)`: `'separate' | 'overlapping' | 'chord'` depending on whether the notes sound one after another, overlap, or at some point all ring together (v0.5).
+- Tape: `tapePositionAt`, `waveformPeaks`, `synthesizeSample`.
+- v0.4: `encodeState` / `decodeState` (settings ↔ URL), `encodeWav`, `trimTrailingSilence`.
+- v0.5: `chromaticRange` and `EDITABLE_PITCHES` (chromatic C3–C6, for the editors); `parseLocale` (stored language or the default).
 
 ---
 
-## 4. Motor de tiempo
+## 4. Time engine
 
-Es la pieza crítica. Todo lo demás depende de que esto sea correcto.
+This is the critical piece. Everything else depends on it being right.
 
-### 4.1 Requisitos
-- Cada voz tiene **su propio programador** con su propio periodo, que puede cambiar en caliente. No usar `Tone.Transport` como reloj común: el desfase continuo exige dos tempos distintos simultáneos.
-- Todo evento se programa sobre `AudioContext.currentTime`. Prohibido disparar sonido desde `setTimeout`, `setInterval` o `requestAnimationFrame` directamente.
+### 4.1 Requirements
+- Each voice has **its own scheduler** with its own period, which can change on the fly. Do not use `Tone.Transport` as a shared clock: continuous phasing needs two different tempos at once.
+- Every event is scheduled on `AudioContext.currentTime`. Triggering sound directly from `setTimeout`, `setInterval` or `requestAnimationFrame` is forbidden.
 
-### 4.2 Algoritmo (patrón "lookahead")
-- Un `setInterval` de **25 ms** despierta al programador.
-- En cada despertar, para cada voz, mientras `voice.nextTime < ctx.currentTime + 0.1`:
-  1. Si el paso está activo, programar la nota en `voice.nextTime`.
-  2. Registrar el `ScheduledEvent` en una cola circular (para la visualización).
-  3. Avanzar: `nextTime += voice.currentPulseDuration()`; incrementar `stepIndex` (y `cycleIndex` al cerrar el ciclo).
-- Los cambios de tempo afectan al siguiente evento no programado, nunca a uno ya programado.
-- **Decidido:** las voces se programan entre sí en orden cronológico (a igual tiempo, primero A). Así una voz puede decidir su siguiente intervalo conociendo ya los tiempos de la otra (fuentes de pulso, modo mesetas).
-- **Decidido:** un ciclo termina con la longitud del patrón con el que se tocó, aunque un oyente cambie el patrón en su último paso. Los cambios de patrón y de acentos se aplican en el último paso de cada ciclo (`onCycleBoundary`), para que caigan en el siguiente límite.
-- **Decidido:** si el temporizador se retrasa (pestaña en segundo plano), los eventos ya pasados se registran pero no suenan, para evitar ráfagas.
+### 4.2 Algorithm ("lookahead" pattern)
+- A **25 ms** `setInterval` wakes the scheduler.
+- On each wake-up, for each voice, while `voice.nextTime < ctx.currentTime + 0.1`:
+  1. If the step is active, schedule the note at `voice.nextTime`.
+  2. Record the `ScheduledEvent` in a circular queue (for the visualization).
+  3. Advance: `nextTime += voice.currentPulseDuration()`; increment `stepIndex` (and `cycleIndex` when the cycle closes).
+- Tempo changes affect the next unscheduled event, never one already scheduled.
+- **Decided:** voices are scheduled together in chronological order (at equal times, A first). That way a voice can decide its next interval already knowing the other's times (pulse sources, plateau mode).
+- **Decided:** a cycle ends with the length of the pattern it was played with, even if a listener changes the pattern on its last step. Pattern and accent changes are applied on the last step of each cycle (`onCycleBoundary`), so they land on the next boundary.
+- **Decided:** if the timer is late (background tab), past events are recorded but do not sound, to avoid bursts.
 
-### 4.3 Sincronía visual
-- Las visualizaciones se dibujan en `requestAnimationFrame`.
-- Tiempo visual: `ctx.currentTime - (ctx.outputLatency ?? ctx.baseLatency ?? 0)`.
-- La posición de cada voz se interpola entre el último evento ya sonado y el siguiente de la cola, no se calcula por separado. Una única fuente de verdad: la cola de eventos.
-- **Decidido:** como el pulso puede durar más que la ventana de antelación (114 ms frente a 100 ms con el tempo por defecto), el motor expone también el siguiente evento de cada voz, ya fijado pero aún no programado (`getNextEvents`).
+### 4.3 Visual sync
+- Visualizations are drawn in `requestAnimationFrame`.
+- Visual time: `ctx.currentTime - (ctx.outputLatency ?? ctx.baseLatency ?? 0)`.
+- Each voice's position is interpolated between the last event already heard and the next one in the queue, not computed separately. A single source of truth: the event queue.
+- **Decided:** since a pulse can last longer than the lookahead window (114 ms vs 100 ms at the default tempo), the engine also exposes each voice's next event, already decided but not yet scheduled (`getNextEvents`).
 
-### 4.4 Ciclo de vida
-- El `AudioContext` se crea o reanuda **solo tras un gesto del usuario** (botón "Empezar"), por la política de autoplay de los navegadores, especialmente iOS Safari. Se crea de forma síncrona dentro del gesto, antes de cualquier `await`.
-- Pausa: suspender el contexto. Detener: vaciar colas y reiniciar índices.
-- Cambiar de módulo detiene el motor y libera nodos.
-- iOS: `navigator.audioSession.type = 'playback'` para sonar con el interruptor de silencio activado; la interfaz sigue las interrupciones del sistema (pasa a «Reanudar»).
+### 4.4 Lifecycle
+- The `AudioContext` is created or resumed **only after a user gesture** ("Start" button), because of browser autoplay policies, especially iOS Safari. It is created synchronously inside the gesture, before any `await`.
+- Pause: suspend the context. Stop: empty the queues and reset the indices.
+- Switching modules stops the engine and frees the nodes.
+- iOS: `navigator.audioSession.type = 'playback'` so it sounds with the silent switch on; the interface follows system interruptions (it switches to "Resume").
 
 ### 4.5 API
 ```ts
@@ -138,216 +144,224 @@ interface Engine {
   stop(): void;
   setVoice(config: VoiceConfig): void;
   setPulseDuration(voice: VoiceId, seconds: number): void;
-  setPulseSource(voice: VoiceId, source: PulseSource | null): void;  // intervalos paso a paso (mesetas)
-  setPatternOffset(voice: VoiceId, steps: number): void;   // para desfase por saltos; en el límite de ciclo
-  setEndCycle(voice: VoiceId, cycle: number | null): void;  // procesos con final; nunca corta un ciclo
+  setPulseSource(voice: VoiceId, source: PulseSource | null): void;  // step-by-step intervals (plateaus)
+  setPatternOffset(voice: VoiceId, steps: number): void;   // for stepped phasing; at the cycle boundary
+  setEndCycle(voice: VoiceId, cycle: number | null): void;  // processes with an end; never cuts a cycle
   getRecentEvents(sinceTime: number): ScheduledEvent[];
-  getNextEvents(): ScheduledEvent[];                        // ver 4.3
-  now(): number;                                            // tiempo visual (4.3)
+  getNextEvents(): ScheduledEvent[];                        // see 4.3
+  now(): number;                                            // visual time (4.3)
   on(event: 'cycle' | 'step', cb: (e: ScheduledEvent) => void): () => void;
 }
 ```
-Los eventos `cycle` y `step` se emiten al programar, hasta 100 ms antes de que suenen.
+The `cycle` and `step` events are emitted on scheduling, up to 100 ms before they sound.
 
 ---
 
-## 5. Módulos
+## 5. Modules
 
-Cada módulo es una carpeta en `src/modules/<nombre>/` con: componente principal, controles, visualización y un breve texto explicativo (2–4 frases) que aparece encima. **Decidido:** cada módulo tiene un `setup.ts` que prepara el motor; lo usan tanto la reproducción en directo como la exportación (§5, v0.4).
+Each module is a folder in `src/modules/<name>/` with: main component, controls, visualization and a short explanatory text (2–4 sentences) shown above. **Decided:** each module has a `setup.ts` that prepares the engine; it is used both by live playback and by export (§5, v0.4).
 
-### Módulo 1 — Desfase continuo
-**Qué muestra:** dos voces con el mismo patrón; la B va ligeramente más deprisa y se separa poco a poco hasta volver al unísono.
+### Module 1 — Continuous phasing
+**What it shows:** two voices with the same pattern; B is slightly faster and drifts apart little by little until it is back in unison.
 
-**Controles**
-- Tempo base (60–200 negras por minuto; por defecto 132, con un paso por semicorchea ≈ 0,114 s).
-- Diferencia de tempo de B: 0 %–5 % (por defecto 1 %).
-- Modo:
-  - *Continuo:* B mantiene la diferencia todo el tiempo.
-  - *Con mesetas:* B acelera hasta adelantarse exactamente un paso, entonces vuelve al tempo de A durante K ciclos (por defecto 8; rango 1–32) y repite. Es la práctica habitual en interpretación en vivo. **Decidido:** empieza con K ciclos en unísono; B se ajusta a la rejilla de A, así que la meseta es exacta aunque cambie el tempo.
-- Material (**decidido**): melódico (marimba) o rítmico (clic).
-- Botón "Reiniciar al unísono".
+**Controls**
+- Base tempo (60–200 quarter notes per minute; default 132, one step per sixteenth note ≈ 0.114 s).
+- B's tempo difference: 0%–5% (default 1%).
+- Mode:
+  - *Continuous:* B keeps the difference all the time.
+  - *With plateaus:* B speeds up until it is exactly one step ahead, then returns to A's tempo for K cycles (default 8; range 1–32) and repeats. This is the usual practice in live performance. **Decided:** it starts with K cycles in unison; B snaps to A's grid, so the plateau is exact even if the tempo changes.
+- Material (**decided**): melodic (marimba) or rhythmic (click).
+- **Decided (v0.5):** the melody is editable: one pitch selector per step (chromatic C3–C6, or a rest), and a "Restore the original melody" button. It applies on the fly and travels in the link (`melodia=D4-_-Fs4-…`, `s` = sharp, `_` = rest). The rhythmic pattern stays fixed.
+- "Restart in unison" button.
 
-**Visualización**
-- Dos anillos concéntricos (A exterior, B interior) con N marcas; las activas resaltadas.
-- Un cursor por anillo que gira según su voz.
-- Arco entre ambos cursores que representa el desfase, con su valor en pasos (p. ej. "2,37 pasos").
-- Contador de "vuelta completa" cuando B recupera el unísono.
+**Visualization**
+- Two concentric rings (A outside, B inside) with N marks; active ones highlighted.
+- One cursor per ring, turning with its voice.
+- An arc between the cursors representing the offset, with its value in steps (e.g. "2.37 steps").
+- A "full lap" counter when B is back in unison.
 
-**Criterios de aceptación**
-- Con diferencia 1 % y N = 12, B adelanta un ciclo completo tras ≈100 ciclos de A (verificable con test del motor sin audio, usando un reloj simulado). ✅ Test del motor.
-- En modo mesetas, el desfase mostrado se detiene en valores enteros (±0,02) durante K ciclos. ✅ Test del motor (de hecho, exacto).
-- Sin derivas visibles entre cursor y sonido tras 5 minutos de reproducción. Garantizado por diseño (§4.3) y con test de deriva de tiempos; falta comprobarlo de oído.
+**Acceptance criteria**
+- With a 1% difference and N = 12, B gains a full cycle after ≈100 cycles of A (verifiable with an engine test without audio, using a simulated clock). ✅ Engine test.
+- In plateau mode, the displayed offset stops at whole values (±0.02) for K cycles. ✅ Engine test (exact, in fact).
+- No visible drift between cursor and sound after 5 minutes of playback. Guaranteed by design (§4.3) and by a timing-drift test; still to be checked by ear.
 
-### Módulo 2 — Desfase por saltos
-**Qué muestra:** B toca el mismo patrón desplazado un número entero de pasos, y el desplazamiento aumenta en 1 cada M repeticiones hasta dar la vuelta completa.
+### Module 2 — Stepped phasing
+**What it shows:** B plays the same pattern shifted by a whole number of steps, and the shift grows by 1 every M repetitions until it comes full circle.
 
-**Controles**
-- Editor de patrón de N pasos (por defecto 12) con casillas.
-- Repeticiones por etapa M (por defecto 8; rango 1–16).
-- Avance automático o manual (botón "Siguiente etapa"). **Decidido:** el avance manual se aplica en el siguiente límite de ciclo.
-- Tempo único para ambas voces.
-- Bucle (**decidido**: tras la etapa N sigue desde la etapa 1, porque la N ya es el unísono).
+**Controls**
+- N-step pattern editor (default 12) with checkboxes.
+- Repetitions per stage M (default 8; range 1–16).
+- Automatic or manual advance ("Next stage" button). **Decided:** a manual advance applies at the next cycle boundary.
+- A single tempo for both voices.
+- Loop (**decided**: after stage N it continues from stage 1, because N is already unison).
 
-**Visualización**
-- Matriz de N+1 filas (etapas 0..N) × N columnas. Cada celda muestra la superposición en ese paso: vacía, solo A, solo B, ambas (cuatro estilos distintos, también distinguibles sin color: relleno, borde, mitad, punto).
-- Fila actual resaltada; cursor de paso recorriéndola.
-- Indicador "Etapa k de N · repetición m de M".
+**Visualization**
+- A matrix of N+1 rows (stages 0..N) × N columns. Each cell shows the overlap at that step: empty, A only, B only, both (four distinct styles, also distinguishable without color: fill, outline, half, dot).
+- Current row highlighted; a step cursor moving along it.
+- "Stage k of N · repetition m of M" indicator.
 
-**Criterios de aceptación** (✅ los tres, con tests contra el motor y reloj simulado)
-- En la etapa k, el patrón de B es exactamente `rotate(A, k)`.
-- El cambio de etapa ocurre en el límite de ciclo, sin cortar el patrón.
-- Tras la etapa N, ambas voces vuelven al unísono y el proceso termina (o se reinicia si "bucle" está activado).
+**Acceptance criteria** (✅ all three, with tests against the engine and a simulated clock)
+- At stage k, B's pattern is exactly `rotate(A, k)`.
+- The stage changes at the cycle boundary, without cutting the pattern.
+- After stage N, both voices are back in unison and the process ends (or restarts if "loop" is on).
 
-### Capa de patrones resultantes (MVP básico, aplicable a 1 y 2)
-- Interruptor "Mostrar resultante": añade una tercera fila/anillo con `resultant(A, B)`. **Decidido:** en el módulo 1 el anillo muestra la resultante del desfase entero más cercano y se atenúa entre pasos; en el módulo 2, una tira con A, B y A+B encima de la matriz.
-- En el módulo 2, botón "Escuchar solo la resultante": silencia A y B y reproduce la combinación con un timbre distinto (`pianoish`, centrado; las coincidencias suenan acentuadas).
-- Posterior: seleccionar un subconjunto de la resultante (por ejemplo, solo notas agudas) para aislar una línea emergente. *(No implementado.)*
+### Resultant-pattern layer (basic MVP, for 1 and 2)
+- "Show resultant" toggle: adds a third row/ring with `resultant(A, B)`. **Decided:** in module 1 the ring shows the resultant of the nearest whole offset and fades between steps; in module 2, a strip with A, B and A+B above the matrix.
+- In module 2, a "Listen to the resultant only" button: mutes A and B and plays the combination with a different timbre (`pianoish`, centered; coincidences sound accented).
+- Later: select a subset of the resultant (for example, only high notes) to isolate an emerging line. *(Not implemented.)*
 
-### Módulo 3 — Construcción por sustitución (v0.2)
-- Patrón objetivo visible en gris; los pasos se activan uno a uno cada M ciclos según `fillOrder`.
-- Botones: construir, deshacer (proceso inverso), modo de orden.
-- Dos voces opcionales construyendo el mismo patrón con un desfase fijo, para que la resultante crezca de forma compleja.
-- **Decidido:**
-  - Empieza con un golpe (no con el ciclo vacío) para que haya sonido desde el principio; M por defecto 4 (rango 1–16).
-  - Deshacer retira golpes en orden inverso desde el siguiente límite de ciclo; el patrón completo y el silencio se mantienen hasta cambiar de dirección.
-  - Orden personalizado: se pulsan los pasos en el orden deseado; los que falten siguen de izquierda a derecha.
-  - Desfase de B: 0–11 pasos (por defecto 3). Los golpes pendientes muestran su turno.
+### Module 3 — Build-up by substitution (v0.2)
+- Target pattern shown in grey; steps are switched on one by one every M cycles according to `fillOrder`.
+- Buttons: build, undo (reverse process), order mode.
+- Two optional voices building the same pattern with a fixed offset, so the resultant grows in a complex way.
+- **Decided:**
+  - It starts with one beat (not with the empty cycle) so there is sound from the start; default M 4 (range 1–16).
+  - Undo removes beats in reverse order from the next cycle boundary; the full pattern and the silence hold until the direction changes.
+  - Custom order: the steps are pressed in the desired order; missing ones follow left to right.
+  - B's offset: 0–11 steps (default 3). Pending beats show their turn.
 
-### Módulo 4 — Ambigüedad 3 contra 2 (v0.2)
-- Ciclo de 12 pasos con un patrón fijo.
-- Selector de agrupación: 4×3, 3×4, 6×2, 2×6. Solo cambian los acentos (volumen y marca visual), no los golpes.
-- Opción de dos agrupaciones simultáneas en voces distintas.
-- **Decidido:**
-  - Material por defecto: pulso con los 12 pasos activos (con el patrón rítmico, algunos acentos caerían en silencios); alternativa: la melodía.
-  - Acento: velocidad 1; resto: 0,35. Visualmente, barra alta frente a barra baja dentro de un recuadro por grupo.
-  - Los cambios de agrupación se aplican en el límite de ciclo, y la visualización muestra la agrupación que suena, no la seleccionada.
+### Module 4 — 3 against 2 ambiguity (v0.2)
+- A 12-step cycle with a fixed pattern.
+- Grouping selector: 4×3, 3×4, 6×2, 2×6. Only the accents change (volume and visual mark), not the beats.
+- Option of two simultaneous groupings in different voices.
+- **Decided:**
+  - Default material: a pulse with all 12 steps active (with the rhythmic pattern, some accents would fall on rests); alternative: the melody.
+  - Accent: velocity 1; the rest: 0.35. Visually, a tall bar versus a short bar inside a box per group.
+  - Grouping changes apply at the cycle boundary, and the visualization shows the grouping that is sounding, not the one selected.
 
-### Módulo 5 — Aumentación (v0.3)
-- Acorde de 3–5 notas sobre un pulso fijo (maracas/hi-hat sintéticos).
-- Cada ciclo, las notas se alargan en un factor (1,0–1,5) o una cantidad fija de pulsos.
-- Visualización: barras horizontales tipo piano roll que se estiran.
-- **Decidido:**
-  - Acorde original sobre re: `D4 A4 E5 G5 C6` (las 3–5 primeras); las notas entran escalonadas, una por pulso, con duración inicial de 1 pulso. Órgano (`organ`) sobre maraca (`shaker`).
-  - Por defecto: factor 1,1; en modo pulsos, +1 (rango 0–4).
-  - El ciclo se estira hasta contener la nota más larga (mínimo 8 pulsos). Cuando superaría 48 pulsos, el proceso termina: el crecimiento por factor es exponencial.
-  - El piano roll muestra en discontinuo la duración inicial y marca el final del ciclo.
+### Module 5 — Augmentation (v0.3)
+- A chord of 3–5 notes over a fixed pulse (synthetic maracas/hi-hat).
+- Each cycle, the notes are lengthened by a factor (1.0–1.5) or a fixed number of pulses.
+- Visualization: horizontal piano-roll bars that stretch.
+- **Decided:**
+  - Original chord on D: `D4 A4 E5 G5 C6` (the first 3–5); the notes enter staggered, one per pulse, with an initial length of 1 pulse. Organ (`organ`) over maracas (`shaker`).
+  - Default: factor 1.1; in pulses mode, +1 (range 0–4).
+  - The cycle stretches to hold the longest note (minimum 8 pulses). When it would exceed 48 pulses, the process ends: growth by a factor is exponential.
+  - The piano roll shows the initial length dashed and marks the end of the cycle.
+- **Decided (v0.5):**
+  - Editable chord: five pitch selectors (the first 3–5 are used, in order of entry); locked while playing, because the process is created at the start. It travels in the link (`acorde=…`). It may repeat pitches: the piano roll tells notes apart by their onset.
+  - A collapsible listening guide ("What to listen for") under the short text: the intention of the process according to *Music as a Gradual Process* (1968), the three phases you hear (a rhythm, a chord taking shape, sustained sound), the pulse as a ruler, listening tips and the difference with *Four Organs* (there the notes do not all grow at the same rate).
+  - Under the piano roll, a sentence says what the current cycle sounds like (`chordTexture`); it only changes twice per process, so it is announced to screen readers.
 
-### Variante "cinta" del módulo 1 (v0.3)
-- Grabar hasta 3 s por micrófono (`getUserMedia`), recortar inicio/fin.
-- Reproducir como dos `AudioBufferSourceNode` en bucle; B con `playbackRate` ligeramente mayor que 1.
-- Visualización de forma de onda en dos anillos.
-- La grabación nunca sale del navegador.
-- **Decidido:** ruta propia (`#/desfase-cinta`), enlazada desde el módulo 1 y desde el inicio, fuera del menú principal. Sonido de ejemplo sintetizado para probarla sin micrófono. Desfase en segundos y en % del bucle.
+### "Tape" variant of module 1 (v0.3)
+- Record up to 3 s with the microphone (`getUserMedia`), trim start/end.
+- Play it as two looping `AudioBufferSourceNode`s; B with a `playbackRate` slightly above 1.
+- Waveform visualization on two rings.
+- The recording never leaves the browser.
+- **Decided:** its own route (`#/desfase-cinta`), linked from module 1 and from the home page, outside the main menu. A synthesized sample sound to try it without a microphone. Offset in seconds and as a % of the loop.
 
-### Compartir y exportar (v0.4)
-- **Decidido — URL:** los ajustes de cada módulo viven en la consulta del hash (`#/desfase-continuo?d=2.5&modo=plateau`). Solo se escriben los que difieren de los valores por defecto; al abrir un enlace, los fuera de rango se ajustan y los no válidos vuelven al valor por defecto. Botón «Copiar enlace a esta configuración». La grabación de la cinta no se comparte.
-- **Decidido — audio:** exportación a WAV (estéreo, 16 bits, 44,1 kHz) de 30 s, 1 min o 2 min. Cada módulo se prepara con su `setup.ts` sobre un contexto sin conexión de Tone.js y con un reloj simulado, de modo que el archivo suena igual que la reproducción. Si el proceso termina antes, se recorta el silencio final (1 s de cola). En el módulo 2, la exportación avanza las etapas automáticamente. La cinta se renderiza con un `OfflineAudioContext`.
-
----
-
-## 6. Interfaz
-
-- Página de inicio con tarjetas de módulos y una frase sobre cada uno.
-- Dentro de cada módulo: texto breve arriba, visualización al centro, controles debajo (en móvil) o a la derecha (≥ 1024 px).
-- Botón grande de reproducir/pausar siempre visible.
-- Tema claro y oscuro según `prefers-color-scheme`.
-- Accesibilidad: controles con teclado (espacio = reproducir/pausar), etiquetas ARIA, estados no codificados solo por color, respeto a `prefers-reduced-motion` (sustituir giro continuo por saltos discretos).
-- **Decidido:** zonas táctiles de al menos 44 px; anuncios para lectores de pantalla del estado de reproducción y de los cambios de etapa; en pantallas estrechas el menú es una fila con desplazamiento lateral y el piano roll se desplaza dentro de su caja.
-
-### Sonidos
-- Instrumentos sintetizados con Tone.js, sin muestras externas:
-  - `mallet`: tipo marimba (FMSynth con envolvente corta).
-  - `click`: percusivo seco (NoiseSynth filtrado).
-  - `pianoish`: PolySynth con ataque corto.
-  - `organ`: PolySynth sostenido (aumentación).
-  - `shaker`: ruido corto filtrado en agudos, tipo maraca (aumentación).
-- A y B con paneo opuesto (±0,4) para que el desfase se oiga espacialmente.
+### Share and export (v0.4)
+- **Decided — URL:** each module's settings live in the hash query (`#/desfase-continuo?d=2.5&modo=plateau`). Only values that differ from the defaults are written; when a link is opened, out-of-range values are clamped and invalid ones fall back to the default. "Copy link to these settings" button. The tape recording is not shared.
+- **Decided — audio:** export to WAV (stereo, 16-bit, 44.1 kHz) of 30 s, 1 min or 2 min. Each module is set up with its `setup.ts` on an offline Tone.js context with a simulated clock, so the file sounds the same as playback. If the process ends earlier, the trailing silence is trimmed (1 s tail). In module 2, the export advances the stages automatically. The tape is rendered with an `OfflineAudioContext`.
 
 ---
 
-## 7. Estructura de carpetas
+## 6. Interface
+
+- Home page with module cards and a sentence about each.
+- Inside each module: short text at the top, visualization in the center, controls below (on mobile) or on the right (≥ 1024 px).
+- A large play/pause button, always visible.
+- Light and dark theme following `prefers-color-scheme`.
+- Accessibility: keyboard controls (space = play/pause), ARIA labels, states not encoded by color only, respect for `prefers-reduced-motion` (replace continuous turning with discrete jumps).
+- **Decided (v0.5) — languages:** a switch next to the title with each language named in itself ("English", "Español"). English by default; the choice is stored in the browser (`localStorage`, with a fallback when it is unavailable) and changes the document's `lang` and title. Texts in `src/i18n/` (one object per language with the same shape, checked by TypeScript; no dependencies). Numbers follow the language (1.25 / 1,25). Routes and URL keys stay in Spanish so shared links keep working. Note names: C♯4 in English and Do♯4 in Spanish, with the same octave numbering.
+- **Decided:** touch targets of at least 44 px; screen-reader announcements of the playback state and stage changes; on narrow screens the menu is a sideways-scrolling row and the piano roll scrolls inside its box.
+
+### Sounds
+- Instruments synthesized with Tone.js, no external samples:
+  - `mallet`: marimba-like (FMSynth with a short envelope).
+  - `click`: dry percussive (filtered NoiseSynth).
+  - `pianoish`: PolySynth with a short attack.
+  - `organ`: sustained PolySynth (augmentation).
+  - `shaker`: short high-filtered noise, maraca-like (augmentation).
+- A and B panned opposite (±0.4) so the phasing can be heard in space.
+
+---
+
+## 7. Folder structure
 
 ```
 src/
-  core/            # funciones puras + tests (sin dependencias de navegador)
-  engine/          # programador, voces, instrumentos, sincronía, cinta, render sin conexión
+  core/            # pure functions + tests (no browser dependencies)
+  engine/          # scheduler, voices, instruments, sync, tape, offline render
   modules/
-    catalog.ts     # lista de módulos (inicio y menú)
-    continuous-phase/   # incluye la variante con cinta
+    catalog.ts     # module list (home page and menu)
+    continuous-phase/   # includes the tape variant
     stepped-phase/
     substitution/
     metric-ambiguity/
     augmentation/
-  components/      # editor de patrón, anillos, matriz, piano roll, transporte, compartir/exportar
-  state/           # hooks: audio, URL, animación, movimiento reducido
+  components/      # pattern and pitch editors, rings, matrix, piano roll, transport, share/export, language
+  i18n/            # interface texts in English and Spanish, number formatting
+  state/           # hooks: audio, URL, language, animation, reduced motion
   styles/
   App.tsx
-docs/              # captura para el README
+docs/              # screenshot for the README
 ```
 
 ---
 
-## 8. Contenidos y derechos
+## 8. Content and rights
 
-- No incluir grabaciones, partituras ni patrones transcritos de obras de Reich.
-- Patrones por defecto originales:
-  - Rítmico de 12 pasos: `x x . x . . x . x x . .` (sin simetría rotacional: las 12 etapas del desfase por saltos son distintas; se comprobó que no es ninguna rotación de *Clapping Music*).
-  - Melódico de 12 notas (re dórico): `D4 A4 E5 A4 F5 E5 D5 A4 C5 E5 G4 A4`
-  - Acorde de la aumentación: `D4 A4 E5 G5 C6`. Sonido de ejemplo de la cinta: cinco notas sintetizadas (re menor pentatónica).
-- Los textos explicativos pueden mencionar obras como referencia de escucha (título y año), sin reproducir material.
+- Do not include recordings, scores or transcribed patterns from works by Reich.
+- Original default patterns (the melody and the chord can be edited since v0.5):
+  - 12-step rhythm: `x x . x . . x . x x . .` (no rotational symmetry: the 12 stages of stepped phasing are all different; checked not to be any rotation of *Clapping Music*).
+  - 12-note melody (D Dorian): `D4 A4 E5 A4 F5 E5 D5 A4 C5 E5 G4 A4`
+  - Augmentation chord: `D4 A4 E5 G5 C6`. Tape sample sound: five synthesized notes (D minor pentatonic).
+- The explanatory texts may mention works as listening references (title and year), without reproducing material.
 
 ---
 
-## 9. Hitos
+## 9. Milestones
 
-| Hito | Contenido | Hecho cuando | Estado |
+| Milestone | Content | Done when | Status |
 |---|---|---|---|
-| M0 | Proyecto Vite + TS + React + Vitest, lint, estructura de carpetas | `npm run dev` y `npm test` funcionan | ✅ |
-| M1 | `src/core` completo con tests; motor con reloj simulable | Tests del motor verifican el criterio de 100 ciclos del módulo 1 | ✅ |
-| M2 | Módulo 1 (continuo y mesetas) | Criterios de aceptación del módulo 1 | ✅ (falta comprobar de oído los 5 minutos) |
-| M3 | Módulo 2 + editor de patrón | Criterios de aceptación del módulo 2 | ✅ |
-| M4 | Capa de resultantes | Visible en ambos módulos; "solo resultante" en el 2 | ✅ |
-| M5 | Pulido MVP: inicio, accesibilidad, móvil (iOS Safari incluido) | Prueba manual en Chrome, Firefox, Safari de escritorio y móvil | Parcial: probado en Chrome de escritorio y a 390 px de ancho; pendiente Firefox, Safari e iOS |
-| 0.2 | Sustitución y ambigüedad 3 contra 2 | Procesos verificados con tests contra el motor | ✅ |
-| 0.3 | Aumentación y variante con cinta | Ídem; grabación por micrófono sin probar en navegador | ✅ (micrófono pendiente) |
-| 0.4 | Compartir por URL y exportar audio | Enlaces validados; WAV generado y analizado en Chrome | ✅ |
+| M0 | Vite + TS + React + Vitest project, lint, folder structure | `npm run dev` and `npm test` work | ✅ |
+| M1 | Complete `src/core` with tests; engine with a simulable clock | Engine tests verify module 1's 100-cycle criterion | ✅ |
+| M2 | Module 1 (continuous and plateaus) | Module 1 acceptance criteria | ✅ (5 minutes still to be checked by ear) |
+| M3 | Module 2 + pattern editor | Module 2 acceptance criteria | ✅ |
+| M4 | Resultant layer | Visible in both modules; "resultant only" in module 2 | ✅ |
+| M5 | MVP polish: home page, accessibility, mobile (iOS Safari included) | Manual test in Chrome, Firefox, desktop and mobile Safari | Partial: tested in desktop Chrome and at 390 px width; Firefox, Safari and iOS pending |
+| 0.2 | Substitution and 3 against 2 ambiguity | Processes verified with tests against the engine | ✅ |
+| 0.3 | Augmentation and tape variant | Same; microphone recording not tested in a browser | ✅ (microphone pending) |
+| 0.4 | Share by URL and export audio | Links validated; WAV generated and analyzed in Chrome | ✅ |
+| 0.5 | Languages, editable melody and chord, augmentation guide | Tests of the new logic; checked in desktop Chrome in both languages | ✅ (not published) |
 
 ---
 
-## 10. Riesgos y decisiones
+## 10. Risks and decisions
 
-- **Deriva por cambios de tempo en caliente:** recalcular siempre desde `nextTime`, nunca desde el tiempo inicial multiplicado.
-- **Latencia de salida variable en Bluetooth:** la compensación de 4.3 lo mitiga; la página de inicio avisa de que con auriculares inalámbricos puede haber desfase imagen-sonido.
-- **Testabilidad del motor:** inyectar un reloj (`() => number`) para poder simular tiempo en tests sin `AudioContext`. El mismo reloj simulado sirve para la exportación.
-- **Decidido:** N fijo en 12 en la interfaz; el modelo y el motor admiten longitudes variables (la aumentación ya las usa).
-- **Decidido:** CSS Modules (M0).
-- **iOS y grabación:** la sesión de audio pasa a `play-and-record` mientras se graba y vuelve a `playback`; cada navegador graba en un formato distinto. Riesgo principal sin probar.
-- **Dependencias de desarrollo:** resuelto el 25 de octubre de 2026 al pasar a Node 22, Vite 8, Vitest 5 y `@vitejs/plugin-react` 6; `npm audit` ya no señala vulnerabilidades. Vite 8 empaqueta con Rolldown; la configuración no necesitó cambios.
+- **Drift from tempo changes on the fly:** always recompute from `nextTime`, never from the start time multiplied.
+- **Variable output latency over Bluetooth:** the compensation in 4.3 mitigates it; the home page warns that with wireless headphones there may be a lag between picture and sound.
+- **Engine testability:** inject a clock (`() => number`) to simulate time in tests without an `AudioContext`. The same simulated clock is used for export.
+- **Decided:** N fixed at 12 in the interface; the model and the engine support variable lengths (augmentation already uses them).
+- **Decided:** CSS Modules (M0).
+- **iOS and recording:** the audio session switches to `play-and-record` while recording and back to `playback`; each browser records in a different format. The main untested risk.
+- **Development dependencies:** solved on 25 October 2026 by moving to Node 22, Vite 8, Vitest 5 and `@vitejs/plugin-react` 6; `npm audit` no longer reports vulnerabilities. Vite 8 bundles with Rolldown; the configuration needed no changes.
 
 ---
 
-## 11. Pendiente y siguientes pasos
+## 11. Pending work and next steps
 
-*Anotado al cerrar la sesión del 24 de octubre de 2026, con la versión 0.4 publicada.*
+*Noted at the end of the 24 October 2026 session, with version 0.4 published.*
 
-### Pendiente (por orden de importancia)
-1. **Prueba manual en navegadores** (criterio de M5, aún sin cumplir). Solo se ha probado en Chrome de escritorio.
-   - **iOS Safari:** que suene con el interruptor de silencio activado; que tras una llamada o al volver de otra app el botón pase a «Reanudar» y siga sonando al pulsarlo; que el botón de reproducir no quede bajo la barra inferior.
-   - **Grabación por micrófono** (variante con cinta) en Chrome, Firefox, Safari e iOS: cada navegador graba en un formato distinto y en iOS cambia la sesión de audio. No se ha probado en ningún navegador.
-   - **Firefox y Safari de escritorio:** los cinco módulos, la cinta y la exportación.
-2. **Comprobaciones de oído:** que cursor y sonido no se separen tras 5 minutos (módulo 1); que los WAV exportados suenen como la reproducción; el equilibrio entre órgano y maraca (aumentación) y el timbre de «solo resultante».
-3. **Botón «Copiar enlace»:** sin probar (se evitó sobrescribir el portapapeles). En iOS puede requerir que la página tenga el foco.
+### Pending (in order of importance)
+1. **Manual browser testing** (M5 criterion, not yet met). Only tested in desktop Chrome.
+   - **iOS Safari:** that it sounds with the silent switch on; that after a call or coming back from another app the button switches to "Resume" and keeps playing when pressed; that the play button is not hidden under the bottom bar.
+   - **Microphone recording** (tape variant) in Chrome, Firefox, Safari and iOS: each browser records in a different format and on iOS the audio session changes. Not tested in any browser.
+   - **Desktop Firefox and Safari:** the five modules, the tape and the export.
+2. **Listening checks:** that cursor and sound do not drift apart after 5 minutes (module 1); that exported WAVs sound like playback; the balance between organ and maracas (augmentation) and the timbre of "resultant only".
+3. **"Copy link" button:** untested (overwriting the clipboard was avoided). On iOS it may require the page to have focus.
 
-### Limitaciones conocidas (menores)
-- Al reiniciar al unísono pueden solaparse hasta ~50 ms de notas ya programadas.
-- En la sustitución, si se cambia el orden durante la reproducción, los números de turno se actualizan antes que el sonido (menos de un ciclo).
-- No hay tests de componentes de interfaz; solo de la lógica pura, el motor y los procesos.
-- En GitHub pueden quedar en caché los commits anteriores a la reescritura del correo (inaccesibles sin conocer su identificador).
+### Known limitations (minor)
+- Restarting in unison can overlap up to ~50 ms of already scheduled notes.
+- In substitution, if the order is changed during playback, the turn numbers update before the sound (less than one cycle).
+- No interface component tests; only of the pure logic, the engine and the processes.
+- GitHub may keep cached commits from before the email rewrite (inaccessible without knowing their identifier).
+- The README screenshot shows the Spanish interface (v0.5).
 
-### Ideas para una posible versión 0.5 (por decidir)
-- Seleccionar un subconjunto de la resultante para aislar una línea emergente (previsto como «posterior» en §5).
-- N variable (8, 12 o 16 pasos) en la interfaz; el motor ya lo admite (§10).
-- Modo mesetas en la variante con cinta.
-- Editar la melodía del módulo 1 y el acorde de la aumentación.
-- Exportar MIDI además de WAV.
-- Tests de componentes de interfaz (por ejemplo, con Testing Library).
+### Ideas for a possible version 0.6 (to be decided)
+- Select a subset of the resultant to isolate an emerging line (planned as "later" in §5).
+- Variable N (8, 12 or 16 steps) in the interface; the engine already supports it (§10).
+- Plateau mode in the tape variant.
+- Export MIDI as well as WAV.
+- Interface component tests (for example, with Testing Library).

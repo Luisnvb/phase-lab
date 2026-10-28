@@ -4,6 +4,8 @@ import { stageMatrix } from '../core/resultant.ts';
 import type { Pattern } from '../core/types.ts';
 import type { Engine } from '../engine/engine.ts';
 import { eventsAround } from '../engine/timeline.ts';
+import { formatDecimal } from '../i18n/format.ts';
+import { useMessages } from '../i18n/messages.ts';
 import { useReducedMotion } from '../state/use-reduced-motion.ts';
 import { drawPhaseRings, type RingColors } from './phase-rings-draw.ts';
 import styles from './PhaseRings.module.css';
@@ -14,11 +16,6 @@ type Props = {
   /** Adds an outer ring with the resultant at the nearest whole-step offset. */
   showResultant?: boolean;
 };
-
-const stepsFormat = new Intl.NumberFormat('es-ES', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 
 function readColors(element: Element): RingColors {
   const style = getComputedStyle(element);
@@ -41,6 +38,7 @@ export function PhaseRings({ engine, pattern, showResultant = false }: Props) {
   const offsetRef = useRef<HTMLSpanElement>(null);
   const lapsRef = useRef<HTMLSpanElement>(null);
   const reducedMotion = useReducedMotion();
+  const { t, locale } = useMessages();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,6 +51,7 @@ export function PhaseRings({ engine, pattern, showResultant = false }: Props) {
     let colors = readColors(canvas);
     let size = 0;
     let lastOffsetText = '';
+    const one = formatDecimal(locale, 1, 2);
     let lastLapsText = '';
 
     const scheme = window.matchMedia('(prefers-color-scheme: dark)');
@@ -84,7 +83,7 @@ export function PhaseRings({ engine, pattern, showResultant = false }: Props) {
         posB = positionAt(events, 'B', now, n) ?? 0;
       }
       const { offset, laps } = phaseReadout(posA, posB, n);
-      const offsetText = stepsFormat.format(offset);
+      const offsetText = formatDecimal(locale, offset, 2);
 
       let resultant;
       if (resultants) {
@@ -97,13 +96,14 @@ export function PhaseRings({ engine, pattern, showResultant = false }: Props) {
         posA,
         posB,
         offsetText,
+        caption: t.phaseRings.caption,
         discrete: reducedMotion,
         colors,
         ...(resultant && { resultant }),
       });
 
       if (offsetText !== lastOffsetText && offsetRef.current) {
-        offsetRef.current.textContent = `${offsetText} ${offsetText === '1,00' ? 'paso' : 'pasos'}`;
+        offsetRef.current.textContent = t.phaseRings.steps(offsetText, offsetText === one);
         lastOffsetText = offsetText;
       }
       const lapsText = String(laps);
@@ -119,7 +119,7 @@ export function PhaseRings({ engine, pattern, showResultant = false }: Props) {
       observer.disconnect();
       scheme.removeEventListener('change', onSchemeChange);
     };
-  }, [engine, pattern, reducedMotion, showResultant]);
+  }, [engine, pattern, reducedMotion, showResultant, t, locale]);
 
   return (
     <figure className={styles.figure}>
@@ -127,14 +127,14 @@ export function PhaseRings({ engine, pattern, showResultant = false }: Props) {
         ref={canvasRef}
         className={styles.canvas}
         role="img"
-        aria-label="Dos anillos concéntricos: la voz A por fuera y la B por dentro, cada uno con un cursor que recorre los pasos del patrón."
+        aria-label={t.phaseRings.label}
       />
       <figcaption className={styles.readout}>
         <span>
-          Desfase: <span ref={offsetRef} className={styles.number} />
+          {t.phaseRings.offset} <span ref={offsetRef} className={styles.number} />
         </span>
         <span>
-          Vueltas completas: <span ref={lapsRef} className={styles.number} />
+          {t.phaseRings.laps} <span ref={lapsRef} className={styles.number} />
         </span>
       </figcaption>
     </figure>

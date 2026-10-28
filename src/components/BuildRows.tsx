@@ -4,6 +4,7 @@ import { rotate } from '../core/pattern.ts';
 import { resultant } from '../core/resultant.ts';
 import { partialPattern } from '../core/substitution.ts';
 import type { Pattern } from '../core/types.ts';
+import { useMessages } from '../i18n/messages.ts';
 import { CellMark } from './CellMark.tsx';
 import { CELL, LABEL_WIDTH } from './stage-matrix-geometry.ts';
 import styles from './StageMatrix.module.css';
@@ -29,6 +30,7 @@ const INSET = 3;
  * voice, shifted, and their resultant.
  */
 export function BuildRows(props: Props) {
+  const { t } = useMessages();
   const { target, order, count, twoVoices, offset, showResultant, cursorRef, showCursor } = props;
   const n = target.steps.length;
   const built = new Set(order.slice(0, count));
@@ -48,7 +50,7 @@ export function BuildRows(props: Props) {
       className={styles.svg}
       viewBox={`0 0 ${width} ${height}`}
       role="img"
-      aria-label={`Patrón objetivo de ${order.length} golpes, ${count} ya sustituidos.`}
+      aria-label={t.buildRows.label(order.length, count)}
     >
       {voiceRows.map((row, r) => (
         <g key={row.label}>

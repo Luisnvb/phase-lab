@@ -2,6 +2,7 @@ import type { Ref } from 'react';
 import { rotate } from '../core/pattern.ts';
 import { resultant } from '../core/resultant.ts';
 import type { Pattern, ResultantCell } from '../core/types.ts';
+import { useMessages } from '../i18n/messages.ts';
 import { CellMark } from './CellMark.tsx';
 import { CELL, LABEL_WIDTH } from './stage-matrix-geometry.ts';
 import styles from './StageMatrix.module.css';
@@ -19,6 +20,7 @@ type Props = {
 
 /** What each voice plays at the current stage, step by step, aligned with A. */
 export function VoiceRows({ pattern, stage, showResultant, cursorRef, showCursor }: Props) {
+  const { t } = useMessages();
   const shifted = rotate(pattern, stage);
   const rows: { label: string; cells: ResultantCell[] }[] = [
     { label: 'A', cells: pattern.steps.map((s) => (s.active ? 'A' : 'none')) },
@@ -35,11 +37,7 @@ export function VoiceRows({ pattern, stage, showResultant, cursorRef, showCursor
       className={styles.svg}
       viewBox={`0 0 ${width} ${height}`}
       role="img"
-      aria-label={
-        showResultant
-          ? `Voces A y B en la etapa ${stage} y su resultante.`
-          : `Voces A y B en la etapa ${stage}.`
-      }
+      aria-label={t.voiceRows.label(stage, showResultant)}
     >
       {rows.map((row, r) => (
         <g key={row.label}>

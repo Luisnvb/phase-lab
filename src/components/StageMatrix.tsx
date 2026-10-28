@@ -1,5 +1,6 @@
 import type { Ref } from 'react';
 import type { ResultantCell } from '../core/types.ts';
+import { useMessages } from '../i18n/messages.ts';
 import { CellMark } from './CellMark.tsx';
 import { CELL, LABEL_WIDTH } from './stage-matrix-geometry.ts';
 import styles from './StageMatrix.module.css';
@@ -13,14 +14,8 @@ type Props = {
   cursorRef: Ref<SVGRectElement>;
 };
 
-const CELL_NAMES: Record<ResultantCell, string> = {
-  none: 'ninguna',
-  A: 'solo A',
-  B: 'solo B',
-  both: 'ambas',
-};
-
 export function StageMatrix({ matrix, currentStage, cursorRef }: Props) {
+  const { t } = useMessages();
   const n = matrix[0]?.length ?? 0;
   const width = LABEL_WIDTH + n * CELL + 2;
   const height = matrix.length * CELL;
@@ -31,7 +26,7 @@ export function StageMatrix({ matrix, currentStage, cursorRef }: Props) {
         className={styles.svg}
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`Matriz de ${matrix.length} etapas por ${n} pasos: en cada etapa, qué voces suenan en cada paso.`}
+        aria-label={t.stageMatrix.label(matrix.length, n)}
       >
         {currentStage !== null && (
           <rect
@@ -75,7 +70,7 @@ export function StageMatrix({ matrix, currentStage, cursorRef }: Props) {
               <svg width={CELL} height={CELL} aria-hidden="true">
                 <CellMark type={type} x={0} y={0} />
               </svg>
-              {CELL_NAMES[type]}
+              {t.stageMatrix.cells[type]}
             </li>
           ))}
         </ul>

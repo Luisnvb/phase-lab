@@ -10,6 +10,8 @@ import {
   type TapeRegion,
   type TapeSession,
 } from '../../engine/tape.ts';
+import { formatDecimal } from '../../i18n/format.ts';
+import { useMessages } from '../../i18n/messages.ts';
 import type { PlaybackStatus } from '../../state/use-audio-runtime.ts';
 import styles from '../../styles/module-layout.module.css';
 import { LIMITS } from './settings.ts';
@@ -20,20 +22,12 @@ const MAX_SECONDS = 3;
 const MIN_LOOP = 0.1;
 const PEAK_BINS = 160;
 
-const secondsFormat = new Intl.NumberFormat('es-ES', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-const percentFormat = new Intl.NumberFormat('es-ES', {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
-
 /**
  * Tape variant of module 1 (SPEC §5): the same phasing, with a short recording
  * of the user's own voice played as two loops, B slightly faster.
  */
 export default function TapePhase() {
+  const { t, locale } = useMessages();
   const sessionRef = useRef<TapeSession | null>(null);
   const [session, setSession] = useState<TapeSession | null>(null);
   const [buffer, setBuffer] = useState<AudioBuffer | null>(null);
@@ -41,7 +35,8 @@ export default function TapePhase() {
   const [differencePercent, setDifferencePercent] = useState(1);
   const [playback, setPlayback] = useState<PlaybackStatus>('idle');
   const [recording, setRecording] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // A flag, not the message: the text follows the current language.
+  const [error, setError] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(
@@ -73,7 +68,7 @@ export default function TapePhase() {
     const current = ensureSession();
     current.stop();
     setPlayback('idle');
-    setError(null);
+    setError(false);
     setRecording(true);
     const controller = new AbortController();
     abortRef.current = controller;
@@ -81,9 +76,7 @@ export default function TapePhase() {
       load(await current.record(MAX_SECONDS, controller.signal));
     } catch (failure) {
       console.error(failure);
-      setError(
-        'No se ha podido usar el micrófono. Revisa el permiso del navegador o prueba con el sonido de ejemplo.',
-      );
+      setError(true);
     } finally {
       setRecording(false);
       abortRef.current = null;
@@ -143,14 +136,8 @@ export default function TapePhase() {
   return (
     <article className={styles.module}>
       <header className={styles.intro}>
-        <h2>Desfase con cinta</h2>
-        <p>
-          La misma técnica que el desfase continuo, pero con tu propia grabación: dos copias de un
-          fragmento corto suenan en bucle, una a cada lado, y la segunda va un poco más deprisa.
-          Las palabras se separan, se superponen y aparecen ritmos y sonidos que no estaban en la
-          grabación. Para escuchar: <cite>It&apos;s Gonna Rain</cite> (1965).{' '}
-          <a href="#/desfase-continuo">Volver al desfase con patrones</a>.
-        </p>
+        <h2>{t.modules.tapePhase.title}</h2>
+        <p>{t.tapePhase.intro}</p>
       </header>
 
       <div className={styles.layout}>
@@ -158,13 +145,11 @@ export default function TapePhase() {
           {buffer ? (
             <TapeRings session={session} peaks={peaks} loop={loop} />
           ) : (
-            <p className={styles.placeholder}>
-              Graba una frase corta (hasta {MAX_SECONDS} segundos) o usa el sonido de ejemplo.
-            </p>
+            <p className={styles.placeholder}>{t.tapePhase.placeholder(MAX_SECONDS)}</p>
           )}
         </div>
 
-        <section className={styles.controls} aria-label="Controles">
+        <section className={styles.controls} aria-label={t.controls.region}>
           <div className={styles.buttons}>
             {recording ? (
               <button
@@ -173,11 +158,11 @@ export default function TapePhase() {
                 aria-pressed="true"
                 onClick={() => abortRef.current?.abort()}
               >
-                Detener la grabación
+                {t.tapePhase.stopRecording}
               </button>
             ) : (
               <button type="button" className={styles.secondary} onClick={() => void record()}>
-                {buffer ? 'Grabar de nuevo' : `Grabar (máx. ${MAX_SECONDS} s)`}
+                {buffer ? t.tapePhase.recordAgain : t.tapePhase.record(MAX_SECONDS)}
               </button>
             )}
             <button
@@ -186,42 +171,40 @@ export default function TapePhase() {
               onClick={() => load(ensureSession().sample())}
               disabled={recording}
             >
-              Usar el sonido de ejemplo
+              {t.tapePhase.useSample}
             </button>
           </div>
           <span className="visually-hidden" role="status">
-            {recording ? 'Grabando' : ''}
+            {recording ? t.tapePhase.recording : ''}
           </span>
-          {recording && <p className={styles.notice}>Grabando… habla cerca del micrófono.</p>}
+          {recording && <p className={styles.notice}>{t.tapePhase.recordingNotice}</p>}
           {error && (
             <p className={styles.notice} role="alert">
-              {error}
+              {t.tapePhase.micError}
             </p>
           )}
-          <p className={styles.hint}>
-            La grabación se queda en tu navegador: no se envía a ningún sitio ni se guarda.
-          </p>
+          <p className={styles.hint}>{t.tapePhase.privacy}</p>
 
           {buffer && (
             <>
               <Slider
-                label="Inicio del bucle"
+                label={t.tapePhase.loopStart}
                 value={region.start}
                 min={0}
                 max={duration}
                 step={0.01}
-                format={(value) => `${secondsFormat.format(value)} s`}
+                format={(value) => t.units.seconds(formatDecimal(locale, value, 2))}
                 onChange={(value) =>
                   setRegion((current) => ({ ...current, start: Math.min(value, current.end - MIN_LOOP) }))
                 }
               />
               <Slider
-                label="Final del bucle"
+                label={t.tapePhase.loopEnd}
                 value={region.end}
                 min={0}
                 max={duration}
                 step={0.01}
-                format={(value) => `${secondsFormat.format(value)} s`}
+                format={(value) => t.units.seconds(formatDecimal(locale, value, 2))}
                 onChange={(value) =>
                   setRegion((current) => ({ ...current, end: Math.max(value, current.start + MIN_LOOP) }))
                 }
@@ -229,10 +212,10 @@ export default function TapePhase() {
             </>
           )}
           <Slider
-            label="Velocidad extra de B"
+            label={t.tapePhase.extraSpeed}
             value={differencePercent}
             {...LIMITS.differencePercent}
-            format={(value) => `${percentFormat.format(value)} %`}
+            format={(value) => t.units.percent(formatDecimal(locale, value, 1))}
             onChange={setDifferencePercent}
           />
           <button
@@ -241,14 +224,14 @@ export default function TapePhase() {
             onClick={start}
             disabled={!buffer || playback === 'idle'}
           >
-            Reiniciar al unísono
+            {t.controls.restartUnison}
           </button>
           {buffer && (
             <ShareExport
-              filename="desfase-con-cinta"
+              filename={t.tapePhase.filename}
               shareable={false}
               render={(seconds) => renderTape(buffer, region, rateB, seconds)}
-              note="El audio exportado se genera en tu navegador. La grabación no se puede compartir por enlace."
+              note={t.tapePhase.exportNote}
             />
           )}
         </section>

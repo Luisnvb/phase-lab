@@ -27,9 +27,9 @@ export function parseRhythm(notation: string): Pattern {
   return { steps };
 }
 
-/** Builds a pattern where every step is active and carries a pitch, e.g. `['D4', 'A4']`. */
-export function melodicPattern(pitches: readonly string[]): Pattern {
-  return { steps: pitches.map((pitch) => ({ active: true, pitch })) };
+/** Builds a pattern from pitches, e.g. `['D4', null, 'A4']`; null is a rest. */
+export function melodicPattern(pitches: readonly (string | null)[]): Pattern {
+  return { steps: pitches.map((pitch) => (pitch === null ? { active: false } : { active: true, pitch })) };
 }
 
 /** Active step indices in ascending order. */

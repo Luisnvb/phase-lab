@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useMessages } from '../i18n/messages.ts';
 import type { PlaybackStatus } from '../state/use-audio-runtime.ts';
 import styles from './Transport.module.css';
 
@@ -7,23 +8,6 @@ type Props = {
   onToggle: () => void;
   /** Nothing to play yet (e.g. no recording). */
   disabled?: boolean;
-};
-
-const LABELS: Record<PlaybackStatus, string> = {
-  idle: 'Empezar',
-  loading: 'Cargando…',
-  playing: 'Pausar',
-  paused: 'Reanudar',
-  ended: 'Empezar de nuevo',
-};
-
-/** Announced to screen readers when the state changes, e.g. with the space bar. */
-const ANNOUNCEMENTS: Record<PlaybackStatus, string> = {
-  idle: '',
-  loading: 'Cargando el sonido',
-  playing: 'Reproduciendo',
-  paused: 'En pausa',
-  ended: 'Proceso terminado',
 };
 
 /** Elements where the space bar already means something. */
@@ -36,6 +20,7 @@ function handlesSpace(target: EventTarget | null): boolean {
 
 /** Large play/pause button, always visible; the space bar toggles it (SPEC §6). */
 export function Transport({ status, onToggle, disabled = false }: Props) {
+  const { t } = useMessages();
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code !== 'Space' || event.repeat || disabled || handlesSpace(event.target)) return;
@@ -59,11 +44,12 @@ export function Transport({ status, onToggle, disabled = false }: Props) {
         <span className={styles.icon} aria-hidden="true">
           {playing ? '❚❚' : '▶'}
         </span>
-        {LABELS[status]}
+        {t.transport.labels[status]}
       </button>
-      <span className={styles.hint}>Barra espaciadora: reproducir / pausar</span>
+      <span className={styles.hint}>{t.transport.hint}</span>
+      {/* Announced to screen readers when the state changes, e.g. with the space bar. */}
       <span className="visually-hidden" role="status">
-        {ANNOUNCEMENTS[status]}
+        {t.transport.announcements[status]}
       </span>
     </div>
   );

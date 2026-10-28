@@ -11,6 +11,7 @@ import { positionAt } from '../../core/phase.ts';
 import { stageMatrix } from '../../core/resultant.ts';
 import type { StageInfo, SteppedProcess } from '../../core/stepped-process.ts';
 import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
+import { useMessages } from '../../i18n/messages.ts';
 import { eventsAround } from '../../engine/timeline.ts';
 import { useAnimationFrame } from '../../state/use-animation-frame.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
@@ -28,16 +29,14 @@ import { setupSteppedPhase } from './setup.ts';
 
 type Advance = 'auto' | 'manual';
 
-const ADVANCE_OPTIONS = [
-  { value: 'auto', label: 'Automático' },
-  { value: 'manual', label: 'Manual' },
-] as const satisfies readonly { value: Advance; label: string }[];
+const ADVANCES: readonly Advance[] = ['auto', 'manual'];
 
 function applyVoices(runtime: AudioRuntime, settings: SteppedPhaseSettings): void {
   for (const config of voiceConfigs(settings)) runtime.setVoice(config);
 }
 
 export default function SteppedPhase() {
+  const { t } = useMessages();
   const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const settingsRef = useRef(settings);
   useEffect(() => {
@@ -130,25 +129,18 @@ export default function SteppedPhase() {
     setSettings((current) => ({ ...current, [key]: value }));
 
   const running = status === 'playing' || status === 'paused';
-  let indicator = `Etapa 0 de ${n}`;
+  let indicator = t.steppedPhase.initial(n);
   if (status === 'ended') {
-    indicator = 'Proceso terminado: las voces han vuelto al unísono';
+    indicator = t.steppedPhase.ended;
   } else if (stageInfo) {
-    indicator = `Etapa ${stageInfo.stage} de ${n} · repetición ${stageInfo.repetition}`;
-    if (auto) indicator += ` de ${repetitions}`;
+    indicator = t.steppedPhase.stage(stageInfo.stage, n, stageInfo.repetition, auto ? repetitions : null);
   }
 
   return (
     <article className={styles.module}>
       <header className={styles.intro}>
-        <h2>Desfase por saltos</h2>
-        <p>
-          Las dos voces tocan el mismo patrón al mismo tempo, pero B lo empieza desplazado un
-          número entero de pasos. Cada pocas repeticiones el desplazamiento crece en uno, y cada
-          etapa hace sonar una combinación distinta, hasta que tras dar la vuelta completa las
-          voces vuelven a coincidir. La matriz muestra todas las etapas a la vez. Para escuchar:{' '}
-          <cite>Clapping Music</cite> (1972).
-        </p>
+        <h2>{t.modules.steppedPhase.title}</h2>
+        <p>{t.steppedPhase.intro}</p>
       </header>
 
       <div className={styles.layout}>
@@ -156,7 +148,7 @@ export default function SteppedPhase() {
           <p className={styles.indicator}>{indicator}</p>
           {/* Only the stage is announced: repetitions would be too frequent. */}
           <span className="visually-hidden" role="status">
-            {status === 'ended' ? '' : stageInfo ? `Etapa ${stageInfo.stage}` : ''}
+            {status === 'ended' ? '' : stageInfo ? t.steppedPhase.announce(stageInfo.stage) : ''}
           </span>
           <VoiceRows
             pattern={pattern}
@@ -172,27 +164,27 @@ export default function SteppedPhase() {
           />
         </div>
 
-        <section className={styles.controls} aria-label="Controles">
+        <section className={styles.controls} aria-label={t.controls.region}>
           <PatternEditor
             pattern={pattern}
             onToggle={(index) => update('pattern', toggleStep(pattern, index))}
             onReset={() => update('pattern', DEFAULT_SETTINGS.pattern)}
           />
           <Slider
-            label="Tempo (negras por minuto)"
+            label={t.controls.tempo}
             value={settings.bpm}
             {...LIMITS.bpm}
             format={(value) => `${value}`}
             onChange={(value) => update('bpm', value)}
           />
           <Choice
-            label="Avance de etapa"
+            label={t.steppedPhase.advance}
             value={auto ? 'auto' : 'manual'}
-            options={ADVANCE_OPTIONS}
+            options={ADVANCES.map((value) => ({ value, label: t.steppedPhase.advances[value] }))}
             onChange={(value) => update('auto', value === 'auto')}
           />
           <Slider
-            label="Repeticiones por etapa"
+            label={t.steppedPhase.repetitions}
             value={repetitions}
             {...LIMITS.repetitions}
             format={(value) => `${value}`}
@@ -200,7 +192,7 @@ export default function SteppedPhase() {
             disabled={!auto}
           />
           <Checkbox
-            label="Repetir en bucle"
+            label={t.steppedPhase.loop}
             checked={loop}
             onChange={(value) => update('loop', value)}
           />
@@ -210,10 +202,10 @@ export default function SteppedPhase() {
             onClick={() => processRef.current?.requestAdvance()}
             disabled={!running}
           >
-            Siguiente etapa
+            {t.steppedPhase.nextStage}
           </button>
           <Checkbox
-            label="Mostrar resultante"
+            label={t.controls.showResultant}
             checked={showResultant}
             onChange={setShowResultant}
           />
@@ -223,10 +215,10 @@ export default function SteppedPhase() {
             aria-pressed={soloResultant}
             onClick={() => setSoloResultant((value) => !value)}
           >
-            {soloResultant ? 'Volver a escuchar A y B' : 'Escuchar solo la resultante'}
+            {soloResultant ? t.steppedPhase.backToVoices : t.steppedPhase.soloResultant}
           </button>
           <ShareExport
-            filename="desfase-por-saltos"
+            filename={t.steppedPhase.filename}
             render={(seconds) =>
               // The export always advances on its own: nobody presses "next stage" offline.
               renderOffline(
@@ -234,7 +226,7 @@ export default function SteppedPhase() {
                 seconds,
               )
             }
-            note="La exportación avanza las etapas automáticamente."
+            note={t.steppedPhase.exportNote}
           />
         </section>
       </div>

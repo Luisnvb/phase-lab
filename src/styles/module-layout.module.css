@@ -121,3 +121,41 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Optional listening guide below the intro, closed by default. */
+.guide {
+  max-width: 44rem;
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+/* Keeps the default disclosure triangle; padding gives a 44 px touch target. */
+.guide summary {
+  padding: 0.6875rem 0;
+  color: var(--color-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.intro .guide p,
+.guide ol {
+  margin: var(--space-2) 0 0;
+}
+
+.guide ol {
+  padding-left: var(--space-6);
+}
+
+.guide li + li {
+  margin-top: var(--space-2);
+}
+
+.guide strong {
+  color: var(--color-text);
+}
+
+.texture {
+  margin: 0;
+  text-align: center;
+}

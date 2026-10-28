@@ -11,6 +11,7 @@ import { positionAt } from '../../core/phase.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { VoiceId } from '../../core/types.ts';
 import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
+import { useMessages } from '../../i18n/messages.ts';
 import { eventsAround } from '../../engine/timeline.ts';
 import { useAnimationFrame } from '../../state/use-animation-frame.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
@@ -31,10 +32,7 @@ import {
 } from './settings.ts';
 import { setupMetricAmbiguity } from './setup.ts';
 
-const MATERIAL_OPTIONS = [
-  { value: 'pulse', label: 'Pulso' },
-  { value: 'melody', label: 'Melodía' },
-] as const satisfies readonly { value: Material; label: string }[];
+const MATERIALS: readonly Material[] = ['pulse', 'melody'];
 
 const GROUPING_OPTIONS = GROUP_SIZES.map((size) => ({
   value: String(size),
@@ -44,6 +42,7 @@ const GROUPING_OPTIONS = GROUP_SIZES.map((size) => ({
 type Sounding = Record<VoiceId, GroupSize>;
 
 export default function MetricAmbiguity() {
+  const { t } = useMessages();
   const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const settingsRef = useRef(settings);
   useEffect(() => {
@@ -129,65 +128,58 @@ export default function MetricAmbiguity() {
     ...(twoVoices ? [{ label: 'B', pattern, groupSize: shownB, beatClass: matrixStyles.bFill }] : []),
   ];
   const indicator = twoVoices
-    ? `A: ${groupingLabel(shownA)} · B: ${groupingLabel(shownB)}`
-    : `Agrupación: ${groupingLabel(shownA)}`;
+    ? t.metricAmbiguity.both(groupingLabel(shownA), groupingLabel(shownB))
+    : t.metricAmbiguity.one(groupingLabel(shownA));
 
   return (
     <article className={styles.module}>
       <header className={styles.intro}>
-        <h2>Ambigüedad 3 contra 2</h2>
-        <p>
-          Un ciclo de doce pulsos puede oírse como cuatro grupos de tres o como tres grupos de
-          cuatro: basta con mover los acentos. Aquí los golpes no cambian nunca, solo cuáles
-          suenan más fuerte. Con dos voces, cada una acentúa una agrupación distinta a la vez, y el
-          oído puede saltar de una a otra.
-        </p>
+        <h2>{t.modules.metricAmbiguity.title}</h2>
+        <p>{t.metricAmbiguity.intro}</p>
       </header>
 
       <div className={styles.layout}>
         <div className={styles.visual}>
           <p className={styles.indicator}>{indicator}</p>
           <GroupingRows rows={rows} cursorRef={cursorRef} showCursor={running} />
-          <p className={styles.legend}>
-            Barra alta: golpe acentuado. Barra baja: golpe sin acento. Cada recuadro es un grupo.
-          </p>
+          <p className={styles.legend}>{t.metricAmbiguity.legend}</p>
         </div>
 
-        <section className={styles.controls} aria-label="Controles">
+        <section className={styles.controls} aria-label={t.controls.region}>
           <Choice
-            label={twoVoices ? 'Agrupación de A' : 'Agrupación'}
+            label={twoVoices ? t.metricAmbiguity.groupingA : t.metricAmbiguity.grouping}
             value={String(settings.groupA)}
             options={GROUPING_OPTIONS}
             onChange={(value) => update('groupA', Number(value) as GroupSize)}
           />
           <Checkbox
-            label="Dos voces con agrupaciones distintas"
+            label={t.metricAmbiguity.twoVoices}
             checked={twoVoices}
             onChange={(value) => update('twoVoices', value)}
           />
           {twoVoices && (
             <Choice
-              label="Agrupación de B"
+              label={t.metricAmbiguity.groupingB}
               value={String(settings.groupB)}
               options={GROUPING_OPTIONS}
               onChange={(value) => update('groupB', Number(value) as GroupSize)}
             />
           )}
           <Choice
-            label="Material"
+            label={t.metricAmbiguity.material}
             value={material}
-            options={MATERIAL_OPTIONS}
+            options={MATERIALS.map((value) => ({ value, label: t.metricAmbiguity.materials[value] }))}
             onChange={(value) => update('material', value)}
           />
           <Slider
-            label="Tempo (negras por minuto)"
+            label={t.controls.tempo}
             value={bpm}
             {...BPM_LIMITS}
             format={(value) => `${value}`}
             onChange={(value) => update('bpm', value)}
           />
           <ShareExport
-            filename="ambiguedad-3-contra-2"
+            filename={t.metricAmbiguity.filename}
             render={(seconds) =>
               renderOffline((runtime) => setupMetricAmbiguity(runtime, settings), seconds)
             }

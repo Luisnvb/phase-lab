@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import styles from './App.module.css';
 import { Home } from './components/Home.tsx';
+import { LanguageSwitch } from './components/LanguageSwitch.tsx';
+import { useMessages } from './i18n/messages.ts';
 import { MODULES } from './modules/catalog.ts';
 import { useHashRoute } from './state/use-hash-route.ts';
 
@@ -8,10 +10,15 @@ const AVAILABLE = MODULES.filter((module) => module.Component);
 
 export default function App() {
   const route = useHashRoute();
+  const { t } = useMessages();
   const current = AVAILABLE.find((module) => module.route === route);
+  const title = current ? `${t.modules[current.id].title} · ${t.appName}` : t.appName;
 
   useEffect(() => {
-    document.title = current ? `${current.title} · Procesos` : 'Procesos';
+    document.title = title;
+  }, [title]);
+
+  useEffect(() => {
     // On narrow screens the menu scrolls sideways: keep the current module in view.
     document
       .querySelector('nav [aria-current="page"]')
@@ -21,12 +28,15 @@ export default function App() {
   return (
     <main className={styles.app}>
       <header className={styles.header}>
-        <h1 className={styles.title}>
-          <a href="#/" className={styles.home}>
-            Procesos
-          </a>
-        </h1>
-        <nav aria-label="Módulos" className={styles.menu}>
+        <div className={styles.brand}>
+          <h1 className={styles.title}>
+            <a href="#/" className={styles.home}>
+              {t.appName}
+            </a>
+          </h1>
+          <LanguageSwitch />
+        </div>
+        <nav aria-label={t.nav} className={styles.menu}>
           <ul className={styles.nav}>
             {AVAILABLE.filter((module) => !module.variant).map((module) => (
               <li key={module.route}>
@@ -35,7 +45,7 @@ export default function App() {
                   className={styles.link}
                   aria-current={module === current ? 'page' : undefined}
                 >
-                  {module.title}
+                  {t.modules[module.id].title}
                 </a>
               </li>
             ))}

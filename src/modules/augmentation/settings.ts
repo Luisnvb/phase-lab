@@ -3,14 +3,18 @@ import {
   type AugmentationCycle,
   type AugmentMode,
 } from '../../core/augmentation.ts';
+import { DEFAULT_CHORD } from '../../core/defaults.ts';
+import { EDITABLE_PITCHES } from '../../core/pitch.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { VoiceConfig } from '../../core/types.ts';
 import type { UrlSchema } from '../../core/url-state.ts';
 
 export type AugmentationSettings = {
   readonly bpm: number;
-  /** Notes in the chord (3–5). */
+  /** Notes in the chord (3–5): the first ones of `chord`. */
   readonly size: number;
+  /** Five editable pitches, in order of entry. */
+  readonly chord: readonly string[];
   readonly mode: AugmentMode;
   /** Growth per cycle in 'factor' mode (1.0–1.5). */
   readonly factor: number;
@@ -21,6 +25,7 @@ export type AugmentationSettings = {
 export const DEFAULT_SETTINGS: AugmentationSettings = {
   bpm: 132,
   size: 4,
+  chord: DEFAULT_CHORD,
   mode: 'factor',
   factor: 1.1,
   pulses: 1,
@@ -39,6 +44,11 @@ export const MAX_CYCLE = 48;
 
 export function amountFor(settings: AugmentationSettings): number {
   return settings.mode === 'factor' ? settings.factor : settings.pulses;
+}
+
+/** The pitches that play: the first `size` of the chord. */
+export function chordPitches(settings: Pick<AugmentationSettings, 'chord' | 'size'>): string[] {
+  return settings.chord.slice(0, settings.size);
 }
 
 /** Voice A: the chord of one cycle. */
@@ -69,6 +79,7 @@ export function pulseConfig(settings: AugmentationSettings): VoiceConfig {
 export const URL_SCHEMA: UrlSchema<AugmentationSettings> = {
   bpm: { key: 'bpm', type: 'number', ...LIMITS.bpm, integer: true },
   size: { key: 'notas', type: 'number', ...LIMITS.size, integer: true },
+  chord: { key: 'acorde', type: 'pitches', length: DEFAULT_CHORD.length, values: EDITABLE_PITCHES },
   mode: { key: 'modo', type: 'choice', values: ['factor', 'pulses'] },
   factor: { key: 'factor', type: 'number', ...LIMITS.factor },
   pulses: { key: 'pulsos', type: 'number', ...LIMITS.pulses, integer: true },

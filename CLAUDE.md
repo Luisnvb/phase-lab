@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-App web educativa para explorar técnicas temporales de la música de proceso (desfase, sustitución, resultantes, etc.). La especificación completa está en `SPEC.md`: léela antes de empezar cualquier tarea y sigue sus hitos en orden.
+App web educativa para explorar técnicas temporales de la música de proceso (desfase, sustitución, resultantes, etc.). La especificación completa está en `SPEC.md` (inglés) y `SPEC.es.md` (español): léela antes de empezar cualquier tarea y sigue sus hitos en orden. Mantén las dos versiones iguales, igual que `README.md` y `README.es.md`.
 
 ## Comandos
 - `npm run dev` — servidor de desarrollo
@@ -18,7 +18,7 @@ App web educativa para explorar técnicas temporales de la música de proceso (d
 - No incluir grabaciones, partituras ni patrones transcritos de obras de Reich (SPEC §8).
 
 ## Convenciones
-- TypeScript estricto. Código, nombres y comentarios en inglés; textos de interfaz en español.
+- TypeScript estricto. Código, nombres y comentarios en inglés; textos de interfaz en inglés (predeterminado) y español, siempre en `src/i18n/` (nunca escritos en los componentes).
 - Componentes funcionales de React, un módulo por carpeta en `src/modules/`.
 - Estados visuales distinguibles sin color; respetar `prefers-reduced-motion`.
 

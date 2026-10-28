@@ -7,6 +7,7 @@ import { driveAugmentation } from './process-driver.ts';
 import {
   amountFor,
   chordConfig,
+  chordPitches,
   MAX_CYCLE,
   MIN_CYCLE,
   pulseConfig,
@@ -24,7 +25,7 @@ export function setupAugmentation(
   current: () => AugmentationSettings = () => settings,
 ): { process: AugmentationProcess; detach: () => void } {
   const process = createAugmentationProcess({
-    size: settings.size,
+    pitches: chordPitches(settings),
     mode: settings.mode,
     amount: amountFor(settings),
     minimum: MIN_CYCLE,

@@ -1,6 +1,7 @@
 import type { Ref } from 'react';
 import { accentsFor } from '../core/accents.ts';
 import type { Pattern } from '../core/types.ts';
+import { useMessages } from '../i18n/messages.ts';
 import { CELL, LABEL_WIDTH } from './stage-matrix-geometry.ts';
 import styles from './StageMatrix.module.css';
 
@@ -25,6 +26,7 @@ const BAR_WIDTH = 8;
  * rest as short ones, so the grouping reads by shape, not only by color.
  */
 export function GroupingRows({ rows, cursorRef, showCursor }: Props) {
+  const { t } = useMessages();
   const n = rows[0]?.pattern.steps.length ?? 0;
   const width = LABEL_WIDTH + n * CELL + 2;
   const height = rows.length * CELL;
@@ -35,7 +37,7 @@ export function GroupingRows({ rows, cursorRef, showCursor }: Props) {
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={rows
-        .map((row) => `Voz ${row.label}: ${n / row.groupSize} grupos de ${row.groupSize}`)
+        .map((row) => t.groupingRows.voice(row.label, n / row.groupSize, row.groupSize))
         .join('. ')}
     >
       {rows.map((row, r) => {

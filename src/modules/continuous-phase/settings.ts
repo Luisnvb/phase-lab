@@ -1,4 +1,6 @@
-import { DEFAULT_MELODY, DEFAULT_RHYTHM } from '../../core/defaults.ts';
+import { DEFAULT_MELODY_PITCHES, DEFAULT_RHYTHM, DEFAULT_STEP_COUNT } from '../../core/defaults.ts';
+import { melodicPattern } from '../../core/pattern.ts';
+import { EDITABLE_PITCHES, type MelodyNote } from '../../core/pitch.ts';
 import { createPlateauSource } from '../../core/plateau.ts';
 import { pulseDuration } from '../../core/tempo.ts';
 import type { Pattern, PulseSource, VoiceConfig } from '../../core/types.ts';
@@ -16,6 +18,8 @@ export type ContinuousPhaseSettings = {
   /** Cycles B stays on each integer offset in plateau mode. */
   readonly plateauCycles: number;
   readonly material: Material;
+  /** The melodic material, one pitch (or rest) per step; editable. */
+  readonly melody: readonly MelodyNote[];
 };
 
 export const DEFAULT_SETTINGS: ContinuousPhaseSettings = {
@@ -24,6 +28,7 @@ export const DEFAULT_SETTINGS: ContinuousPhaseSettings = {
   mode: 'continuous',
   plateauCycles: 8,
   material: 'melody',
+  melody: DEFAULT_MELODY_PITCHES,
 };
 
 export const LIMITS = {
@@ -35,8 +40,8 @@ export const LIMITS = {
 /** Voices pan to opposite sides so the phasing can be heard in space (SPEC §6). */
 const PAN = 0.4;
 
-export function patternFor(material: Material): Pattern {
-  return material === 'melody' ? DEFAULT_MELODY : DEFAULT_RHYTHM;
+export function patternFor(settings: Pick<ContinuousPhaseSettings, 'material' | 'melody'>): Pattern {
+  return settings.material === 'melody' ? melodicPattern(settings.melody) : DEFAULT_RHYTHM;
 }
 
 /**
@@ -45,7 +50,7 @@ export function patternFor(material: Material): Pattern {
  */
 export function voiceConfigs(settings: ContinuousPhaseSettings): [VoiceConfig, VoiceConfig] {
   const pulse = pulseDuration(settings.bpm);
-  const pattern = patternFor(settings.material);
+  const pattern = patternFor(settings);
   const instrument = settings.material === 'melody' ? 'mallet' : 'click';
   // In plateau mode B's timing comes from its pulse source; its own pulse is the base one.
   const pulseB = settings.mode === 'continuous' ? pulse / (1 + settings.differencePercent / 100) : pulse;
@@ -70,7 +75,8 @@ export function pulseSourceFor(settings: PulseSourceSettings): PulseSource | nul
     leader: 'A',
     difference: settings.differencePercent / 100,
     plateauCycles: settings.plateauCycles,
-    stepsPerCycle: patternFor(settings.material).steps.length,
+    // Both materials have 12 steps; editing the melody never changes its length.
+    stepsPerCycle: DEFAULT_STEP_COUNT,
   });
 }
 
@@ -81,4 +87,11 @@ export const URL_SCHEMA: UrlSchema<ContinuousPhaseSettings> = {
   mode: { key: 'modo', type: 'choice', values: ['continuous', 'plateau'] },
   plateauCycles: { key: 'k', type: 'number', ...LIMITS.plateauCycles, integer: true },
   material: { key: 'material', type: 'choice', values: ['melody', 'rhythm'] },
+  melody: {
+    key: 'melodia',
+    type: 'pitches',
+    length: DEFAULT_MELODY_PITCHES.length,
+    values: EDITABLE_PITCHES,
+    rests: true,
+  },
 };

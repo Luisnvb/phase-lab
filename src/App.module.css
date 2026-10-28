@@ -15,6 +15,13 @@
   margin-bottom: var(--space-6);
 }
 
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
 .title {
   margin: 0;
   font-size: 2rem;

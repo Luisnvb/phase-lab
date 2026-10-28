@@ -1,5 +1,6 @@
 import type { Ref } from 'react';
 import type { ChordNote } from '../core/augmentation.ts';
+import { useMessages } from '../i18n/messages.ts';
 import { PULSE_WIDTH, ROLL_LABEL_WIDTH, ROW_HEIGHT } from './piano-roll-geometry.ts';
 import styles from './PianoRoll.module.css';
 
@@ -16,10 +17,11 @@ type Props = {
 };
 
 /**
- * Piano roll for augmentation: one row per note, highest on top, with a bar
- * that stretches every cycle; a bottom row for the steady pulse.
+ * Piano roll for augmentation: one row per note, the first to enter at the
+ * bottom, with a bar that stretches every cycle; a bottom row for the steady pulse.
  */
 export function PianoRoll({ notes, original, length, maximum, cursorRef, showCursor }: Props) {
+  const { t } = useMessages();
   const rows = [...notes].reverse();
   const pulseRow = rows.length;
   const width = ROLL_LABEL_WIDTH + maximum * PULSE_WIDTH + 2;
@@ -28,12 +30,12 @@ export function PianoRoll({ notes, original, length, maximum, cursorRef, showCur
 
   return (
     // On narrow screens the roll keeps a readable width and scrolls sideways.
-    <div className={styles.scroller} tabIndex={0} role="region" aria-label="Rollo de piano">
+    <div className={styles.scroller} tabIndex={0} role="region" aria-label={t.pianoRoll.region}>
       <svg
         className={styles.svg}
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`Acorde de ${notes.length} notas en un ciclo de ${length} pulsos.`}
+        aria-label={t.pianoRoll.label(notes.length, length)}
       >
         {/* Pulse grid; every fourth line is stronger. */}
         {Array.from({ length: maximum + 1 }, (_, pulse) => (
@@ -51,13 +53,14 @@ export function PianoRoll({ notes, original, length, maximum, cursorRef, showCur
         <line x1={x(length)} x2={x(length)} y1={0} y2={height} className={styles.cycleEnd} />
 
         {rows.map((note, r) => {
-          const before = original.find((o) => o.pitch === note.pitch);
+          // Notes are told apart by onset: an edited chord may repeat a pitch.
+          const before = original.find((o) => o.onset === note.onset);
           const top = r * ROW_HEIGHT + 3;
           const barHeight = ROW_HEIGHT - 6;
           return (
-            <g key={note.pitch}>
+            <g key={note.onset}>
               <text x={ROLL_LABEL_WIDTH - 6} y={r * ROW_HEIGHT + ROW_HEIGHT / 2} className={styles.label}>
-                {note.pitch}
+                {t.pitchName(note.pitch)}
               </text>
               <rect
                 x={x(note.onset) + 1}
@@ -82,7 +85,7 @@ export function PianoRoll({ notes, original, length, maximum, cursorRef, showCur
         })}
 
         <text x={ROLL_LABEL_WIDTH - 6} y={pulseRow * ROW_HEIGHT + ROW_HEIGHT / 2} className={styles.label}>
-          pulso
+          {t.pianoRoll.pulse}
         </text>
         {Array.from({ length }, (_, pulse) => (
           <circle

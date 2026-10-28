@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Checkbox, Choice, Slider } from '../../components/Controls.tsx';
 import { PhaseRings } from '../../components/PhaseRings.tsx';
+import { PitchListEditor } from '../../components/PitchListEditor.tsx';
 import { ShareExport } from '../../components/ShareExport.tsx';
 import { Transport } from '../../components/Transport.tsx';
+import { EDITABLE_PITCHES } from '../../core/pitch.ts';
 import { renderOffline, type AudioRuntime } from '../../engine/audio-runtime.ts';
+import { formatDecimal } from '../../i18n/format.ts';
+import { useMessages } from '../../i18n/messages.ts';
 import { useAudioRuntime } from '../../state/use-audio-runtime.ts';
 import { useUrlSettings } from '../../state/use-url-settings.ts';
 import styles from '../../styles/module-layout.module.css';
@@ -20,26 +24,15 @@ import {
 } from './settings.ts';
 import { setupContinuousPhase } from './setup.ts';
 
-const percentFormat = new Intl.NumberFormat('es-ES', {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
-
-const MODE_OPTIONS = [
-  { value: 'continuous', label: 'Continuo' },
-  { value: 'plateau', label: 'Con mesetas' },
-] as const satisfies readonly { value: PhaseMode; label: string }[];
-
-const MATERIAL_OPTIONS = [
-  { value: 'melody', label: 'Melódico' },
-  { value: 'rhythm', label: 'Rítmico' },
-] as const satisfies readonly { value: Material; label: string }[];
+const MODES: readonly PhaseMode[] = ['continuous', 'plateau'];
+const MATERIALS: readonly Material[] = ['melody', 'rhythm'];
 
 function applyVoices(runtime: AudioRuntime, settings: ContinuousPhaseSettings): void {
   for (const config of voiceConfigs(settings)) runtime.setVoice(config);
 }
 
 export default function ContinuousPhase() {
+  const { t, locale } = useMessages();
   const [settings, setSettings] = useUrlSettings(DEFAULT_SETTINGS, URL_SCHEMA);
   const [showResultant, setShowResultant] = useState(false);
   const settingsRef = useRef(settings);
@@ -57,7 +50,8 @@ export default function ContinuousPhase() {
     if (runtime) applyVoices(runtime, settings);
   }, [runtime, settings]);
 
-  const { mode, differencePercent, plateauCycles, material } = settings;
+  const { mode, differencePercent, plateauCycles, material, melody } = settings;
+  const pattern = useMemo(() => patternFor({ material, melody }), [material, melody]);
   useEffect(() => {
     // A new plateau source picks up the current offset, so switching modes is seamless.
     runtime?.engine.setPulseSource(
@@ -74,49 +68,42 @@ export default function ContinuousPhase() {
   return (
     <article className={styles.module}>
       <header className={styles.intro}>
-        <h2>Desfase continuo</h2>
-        <p>
-          Dos voces tocan el mismo patrón, pero la voz B va un poco más deprisa. Poco a poco se
-          adelanta: el patrón se superpone consigo mismo en posiciones distintas y aparecen
-          figuras nuevas, hasta que tras una vuelta completa ambas vuelven al unísono. Con
-          «mesetas», B se detiene en cada desfase exacto durante unos ciclos, como suele hacerse
-          al tocarlo en directo. Para escuchar: <cite>Piano Phase</cite> (1967).{' '}
-          <a href="#/desfase-cinta">Pruébalo con tu propia voz</a>.
-        </p>
+        <h2>{t.modules.continuousPhase.title}</h2>
+        <p>{t.continuousPhase.intro}</p>
       </header>
 
       <div className={styles.layout}>
         <div className={styles.visual}>
           <PhaseRings
             engine={runtime?.engine ?? null}
-            pattern={patternFor(material)}
+            pattern={pattern}
             showResultant={showResultant}
           />
         </div>
 
-        <section className={styles.controls} aria-label="Controles">
+        <section className={styles.controls} aria-label={t.controls.region}>
           <Slider
-            label="Tempo (negras por minuto)"
+            label={t.controls.tempo}
             value={settings.bpm}
             {...LIMITS.bpm}
             format={(value) => `${value}`}
             onChange={(value) => update('bpm', value)}
           />
           <Slider
-            label="Diferencia de tempo de B"
+            label={t.continuousPhase.difference}
             value={differencePercent}
             {...LIMITS.differencePercent}
-            format={(value) => `${percentFormat.format(value)} %`}
+            format={(value) => t.units.percent(formatDecimal(locale, value, 1))}
             onChange={(value) => update('differencePercent', value)}
           />
           <Choice
-            label="Modo"
+            label={t.continuousPhase.mode}
             value={mode}
-            options={MODE_OPTIONS}
+            options={MODES.map((value) => ({ value, label: t.continuousPhase.modes[value] }))}
             onChange={(value) => update('mode', value)}
           />
           <Slider
-            label="Ciclos en cada meseta"
+            label={t.continuousPhase.plateauCycles}
             value={plateauCycles}
             {...LIMITS.plateauCycles}
             format={(value) => `${value}`}
@@ -124,13 +111,30 @@ export default function ContinuousPhase() {
             disabled={mode !== 'plateau'}
           />
           <Choice
-            label="Material"
+            label={t.continuousPhase.material}
             value={material}
-            options={MATERIAL_OPTIONS}
+            options={MATERIALS.map((value) => ({ value, label: t.continuousPhase.materials[value] }))}
             onChange={(value) => update('material', value)}
           />
+          {material === 'melody' && (
+            <PitchListEditor
+              legend={t.pitchEditor.melody}
+              notes={melody}
+              pitches={EDITABLE_PITCHES}
+              rests
+              itemLabel={t.patternEditor.step}
+              onChange={(index, note) =>
+                update(
+                  'melody',
+                  melody.map((current, i) => (i === index ? note : current)),
+                )
+              }
+              onReset={() => update('melody', DEFAULT_SETTINGS.melody)}
+              resetLabel={t.pitchEditor.resetMelody}
+            />
+          )}
           <Checkbox
-            label="Mostrar resultante"
+            label={t.controls.showResultant}
             checked={showResultant}
             onChange={setShowResultant}
           />
@@ -140,10 +144,10 @@ export default function ContinuousPhase() {
             onClick={() => void restart()}
             disabled={!runtime}
           >
-            Reiniciar al unísono
+            {t.controls.restartUnison}
           </button>
           <ShareExport
-            filename="desfase-continuo"
+            filename={t.continuousPhase.filename}
             render={(seconds) =>
               renderOffline((runtime) => setupContinuousPhase(runtime, settings), seconds)
             }

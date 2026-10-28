@@ -34,4 +34,15 @@ describe('continuous phase settings', () => {
     expect(rhythm.instrument).toBe('click');
     expect(rhythm.pattern.steps.some((s) => !s.active)).toBe(true);
   });
+
+  test('an edited melody is what both voices play, rests included', () => {
+    const melody = [...DEFAULT_SETTINGS.melody];
+    melody[0] = 'C#5';
+    melody[1] = null;
+    const [a, b] = voiceConfigs({ ...DEFAULT_SETTINGS, melody });
+    for (const voice of [a, b]) {
+      expect(voice.pattern.steps[0]).toEqual({ active: true, pitch: 'C#5' });
+      expect(voice.pattern.steps[1]).toEqual({ active: false });
+    }
+  });
 });

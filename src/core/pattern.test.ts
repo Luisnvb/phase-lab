@@ -27,6 +27,11 @@ describe('rotate', () => {
     expect(toString(rotate(p, 18))).toBe('xx.x..');
   });
 
+  test('melodicPattern turns null into a rest', () => {
+    const m = melodicPattern(['C4', null, 'E4']);
+    expect(m.steps).toEqual([{ active: true, pitch: 'C4' }, { active: false }, { active: true, pitch: 'E4' }]);
+  });
+
   test('keeps pitches attached to their steps', () => {
     const m = melodicPattern(['C4', 'D4', 'E4']);
     expect(rotate(m, 1).steps.map((s) => s.pitch)).toEqual(['D4', 'E4', 'C4']);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { encodeWav } from '../core/wav.ts';
 import type { RenderedAudio } from '../engine/audio-runtime.ts';
+import { useMessages } from '../i18n/messages.ts';
 import { Choice } from './Controls.tsx';
 import styles from './ShareExport.module.css';
 
@@ -35,6 +36,7 @@ function download(audio: RenderedAudio, filename: string) {
 
 /** Copy a link to the current settings, and export the process as a WAV file (v0.4). */
 export function ShareExport({ render, filename, shareable = true, note }: Props) {
+  const { t } = useMessages();
   const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [seconds, setSeconds] = useState('60');
   const [exportState, setExportState] = useState<ExportState>('idle');
@@ -62,34 +64,34 @@ export function ShareExport({ render, filename, shareable = true, note }: Props)
 
   const exportMessage: Record<ExportState, string> = {
     idle: '',
-    rendering: 'Generando el audio…',
-    done: 'Audio exportado.',
-    error: 'No se ha podido exportar el audio.',
+    rendering: t.share.rendering,
+    done: t.share.done,
+    error: t.share.failed,
   };
 
   return (
-    <section className={styles.panel} aria-label="Compartir y exportar">
+    <section className={styles.panel} aria-label={t.share.panel}>
       {shareable && (
         <div className={styles.group}>
           <button type="button" className={styles.button} onClick={() => void copy()}>
-            Copiar enlace a esta configuración
+            {t.share.copy}
           </button>
           <span role="status" className={styles.status}>
-            {copied === 'copied' && 'Enlace copiado.'}
-            {copied === 'failed' && 'No se ha podido copiar: usa la dirección de la barra del navegador.'}
+            {copied === 'copied' && t.share.copied}
+            {copied === 'failed' && t.share.copyFailed}
           </span>
         </div>
       )}
       {render && (
         <div className={styles.group}>
-          <Choice label="Duración del audio" value={seconds} options={DURATIONS} onChange={setSeconds} />
+          <Choice label={t.share.duration} value={seconds} options={DURATIONS} onChange={setSeconds} />
           <button
             type="button"
             className={styles.button}
             onClick={() => void exportAudio()}
             disabled={exportState === 'rendering'}
           >
-            Exportar audio (WAV)
+            {t.share.export}
           </button>
           <span role="status" className={styles.status}>
             {exportMessage[exportState]}

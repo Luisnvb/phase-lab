@@ -1,71 +1,74 @@
-# Procesos
+# Processes
 
-App web educativa para explorar técnicas de organización del tiempo de la música de proceso: desfase continuo, desfase por saltos, construcción por sustitución, patrones resultantes, ambigüedad métrica y aumentación.
+*English · [Español](README.es.md)*
 
-Cada módulo combina sonido generado en tiempo real, una visualización sincronizada con precisión y pocos controles: **el proceso se oye y se ve mientras sucede**.
+An educational web app for exploring the time techniques of process music: continuous phasing, stepped phasing, build-up by substitution, resultant patterns, metric ambiguity and augmentation.
 
-**Pruébala:** https://luisnvb.dev/phase-lab/
+Every module combines sound generated in real time, a precisely synchronized visualization and a few controls: **you hear and see the process while it happens**.
 
-![Módulo de desfase continuo en modo «con mesetas»: dos anillos concéntricos con los pasos de las voces A y B, el arco del desfase (4,87 pasos) y un anillo exterior con la resultante; a la derecha, los controles.](docs/screenshot.png)
+**Try it:** https://luisnvb.dev/phase-lab/ — in English or Spanish (switch next to the title).
 
-## Módulos
+![Continuous phasing module in “with plateaus” mode: two concentric rings with the steps of voices A and B, the offset arc (4.87 steps) and an outer ring with the resultant; the controls on the right.](docs/screenshot.png)
 
-| Módulo | Qué muestra | Estado |
+## Modules
+
+| Module | What it shows | Status |
 |---|---|---|
-| Desfase continuo | Dos voces con el mismo patrón; una va un poco más deprisa y se separa poco a poco hasta volver al unísono. Modo continuo o con mesetas. | ✅ |
-| Desfase con cinta | Variante del anterior con tu propia voz: graba hasta 3 s con el micrófono (o usa un sonido de ejemplo) y escucha dos copias en bucle, una algo más rápida. | ✅ |
-| Desfase por saltos | La segunda voz se adelanta un paso cada M repeticiones; una matriz muestra todas las etapas. | ✅ |
-| Patrones resultantes | Capa común a los dos anteriores: qué suena cuando las voces se superponen, y escucha de solo la resultante. | ✅ |
-| Construcción por sustitución | Un ciclo vacío se llena golpe a golpe (o se vacía), con una o dos voces. | ✅ |
-| Ambigüedad 3 contra 2 | El mismo ciclo de 12 pulsos acentuado como 4×3, 3×4, 6×2 o 2×6, con una o dos voces. | ✅ |
-| Aumentación | Sobre un pulso fijo, las notas de un acorde se alargan ciclo a ciclo y el ciclo se estira con ellas. | ✅ |
+| Continuous phasing | Two voices with the same pattern; one is slightly faster and drifts apart little by little until it is back in unison. Continuous mode or with plateaus, and an editable melody. | ✅ |
+| Tape phasing | A variant of the above with your own voice: record up to 3 s with the microphone (or use a sample sound) and hear two looping copies, one slightly faster. | ✅ |
+| Stepped phasing | The second voice moves one step ahead every M repetitions; a matrix shows every stage. | ✅ |
+| Resultant patterns | A layer shared by the two above: what sounds when the voices overlap, and listening to the resultant alone. | ✅ |
+| Build-up by substitution | An empty cycle fills up beat by beat (or empties), with one or two voices. | ✅ |
+| 3 against 2 ambiguity | The same 12-pulse cycle accented as 4×3, 3×4, 6×2 or 2×6, with one or two voices. | ✅ |
+| Augmentation | Over a steady pulse, the notes of an (editable) chord grow longer cycle after cycle and the cycle stretches with them. Includes a guide to what to listen for. | ✅ |
 
-Usa auriculares o altavoces estéreo: las voces suenan a cada lado.
+Use headphones or stereo speakers: the voices sound on either side.
 
-## Compartir y exportar
+## Sharing and exporting
 
-- **Enlaces:** la dirección del navegador guarda siempre los ajustes del módulo (por ejemplo, `#/desfase-continuo?d=2.5&modo=plateau`), y el botón «Copiar enlace a esta configuración» la copia para compartirla. Al abrir un enlace, los valores fuera de rango se ajustan y los no válidos vuelven al valor por defecto.
-- **Audio:** «Exportar audio (WAV)» genera 30 s, 1 min o 2 min del proceso con los ajustes actuales, en estéreo a 44,1 kHz. Se renderiza en el navegador, más rápido que en tiempo real, con la misma lógica que la reproducción en directo; si el proceso termina antes, el audio acaba con él.
-- **Privacidad:** las grabaciones del micrófono no salen del navegador: no se envían, no se guardan y no se pueden compartir por enlace.
+- **Links:** the browser address always holds the module's settings (for example `#/desfase-continuo?d=2.5&modo=plateau`), and the “Copy link to these settings” button copies it for sharing. When a link is opened, out-of-range values are clamped and invalid ones fall back to the default. Routes and setting keys are in Spanish in both languages, so links work whatever language the reader has chosen.
+- **Audio:** “Export audio (WAV)” renders 30 s, 1 min or 2 min of the process with the current settings, in stereo at 44.1 kHz. It is rendered in the browser, faster than real time, with the same logic as live playback; if the process ends earlier, the audio ends with it.
+- **Privacy:** microphone recordings never leave the browser: they are not sent, not saved and cannot be shared by link. The chosen language is remembered in the browser only.
 
-## Desarrollo
+## Development
 
-Requiere Node.js 22.12 o superior.
+Requires Node.js 22.12 or later.
 
 ```sh
 npm install
-npm run dev      # servidor de desarrollo
+npm run dev      # development server
 npm test         # tests (Vitest)
-npm run lint     # ESLint y comprobación de tipos
-npm run build    # build de producción en dist/
+npm run lint     # ESLint and type checking
+npm run build    # production build in dist/
 ```
 
-Stack: Vite, React 18, TypeScript estricto, Web Audio API, Tone.js (solo para sintetizar los instrumentos), Canvas y SVG.
+Stack: Vite, React 18, strict TypeScript, Web Audio API, Tone.js (only to synthesize the instruments), Canvas and SVG. Interface texts live in `src/i18n/`, one object per language with the same shape, checked by TypeScript; there is no i18n dependency.
 
-## Cómo funciona el tiempo
+## How time works
 
-El reto técnico es la sincronía entre sonido e imagen con voces que tienen tempos distintos a la vez.
+The technical challenge is keeping sound and picture in sync with voices that run at different tempos at the same time.
 
-- **Nada suena desde un temporizador.** Un programador con ventana de antelación (`src/engine/`) agenda cada nota sobre `AudioContext.currentTime`. Cada voz lleva su propio reloj y su propio periodo.
-- **Una única fuente de verdad.** Las visualizaciones no calculan el tiempo: leen la cola de eventos del motor e interpolan en `engine.now()`, ya compensado por la latencia de salida.
-- **La exportación usa el mismo motor.** Para generar el WAV, cada módulo se prepara con la misma función que en directo, pero sobre un contexto de audio sin conexión y con un reloj simulado que avanza por toda la duración; Tone.js renderiza después todas las notas ya agendadas.
-- **Lógica pura y testeada.** Patrones, procesos y planificación (`src/core/`) no dependen del navegador, y el motor recibe un reloj inyectable, así que los tests comprueban, por ejemplo, que con un 1 % de diferencia la voz B adelanta un ciclo completo tras 100 ciclos de A, sin `AudioContext`.
+- **Nothing sounds from a timer.** A lookahead scheduler (`src/engine/`) schedules every note on `AudioContext.currentTime`. Each voice keeps its own clock and its own period.
+- **A single source of truth.** Visualizations do not compute time: they read the engine's event queue and interpolate at `engine.now()`, already compensated for output latency.
+- **Export uses the same engine.** To generate the WAV, each module is set up with the same function as in live playback, but on an offline audio context and with a simulated clock that runs through the whole duration; Tone.js then renders every scheduled note.
+- **Pure, tested logic.** Patterns, processes and scheduling (`src/core/`) do not depend on the browser, and the engine takes an injectable clock, so the tests check, for example, that with a 1% difference voice B gains a full cycle after 100 cycles of A, without an `AudioContext`.
 
-La especificación completa está en [`SPEC.md`](SPEC.md).
+The full specification is in [`SPEC.md`](SPEC.md) (in Spanish: [`SPEC.es.md`](SPEC.es.md)).
 
-## Versiones
+## Versions
 
-| Versión | Contenido |
+| Version | Content |
 |---|---|
-| 0.1 | Motor de tiempo, desfase continuo (con mesetas), desfase por saltos, editor de patrones y capa de resultantes. |
-| 0.2 | Construcción por sustitución y ambigüedad 3 contra 2. |
-| 0.3 | Aumentación y variante con cinta del desfase continuo (grabación por micrófono). |
-| 0.4 | Compartir configuraciones por URL y exportar audio en WAV. |
+| 0.1 | Time engine, continuous phasing (with plateaus), stepped phasing, pattern editor and resultant layer. |
+| 0.2 | Build-up by substitution and 3 against 2 ambiguity. |
+| 0.3 | Augmentation and the tape variant of continuous phasing (microphone recording). |
+| 0.4 | Sharing settings by URL and exporting audio as WAV. |
+| 0.5 | English and Spanish interface, editable melody and chord, listening guide for augmentation. |
 
-## Contenidos y derechos
+## Content and rights
 
-Todo el material musical es original. La app no incluye grabaciones, partituras ni patrones transcritos de obras de Steve Reich; los textos solo citan títulos y años como referencia de escucha.
+All musical material is original. The app includes no recordings, scores or transcribed patterns from works by Steve Reich; the texts only cite titles and years as listening references.
 
-## Licencia
+## License
 
 [MIT](LICENSE)

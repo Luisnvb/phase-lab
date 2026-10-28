@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { phaseReadout } from '../core/phase.ts';
 import type { TapeSession } from '../engine/tape.ts';
+import { formatDecimal } from '../i18n/format.ts';
+import { useMessages } from '../i18n/messages.ts';
 import { useReducedMotion } from '../state/use-reduced-motion.ts';
 import type { RingColors } from './phase-rings-draw.ts';
 import styles from './PhaseRings.module.css';
@@ -12,12 +14,6 @@ type Props = {
   /** Loop length in seconds. */
   loop: number;
 };
-
-const secondsFormat = new Intl.NumberFormat('es-ES', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-const percentFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 });
 
 function readColors(element: Element): RingColors {
   const style = getComputedStyle(element);
@@ -40,6 +36,7 @@ export function TapeRings({ session, peaks, loop }: Props) {
   const offsetRef = useRef<HTMLSpanElement>(null);
   const lapsRef = useRef<HTMLSpanElement>(null);
   const reducedMotion = useReducedMotion();
+  const { t, locale } = useMessages();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -73,7 +70,7 @@ export function TapeRings({ session, peaks, loop }: Props) {
       frameId = requestAnimationFrame(render);
       const positions = session?.positions(session.now()) ?? { a: 0, b: 0 };
       const { offset, laps } = loop > 0 ? phaseReadout(positions.a, positions.b, loop) : { offset: 0, laps: 0 };
-      const offsetText = `${secondsFormat.format(offset)} s`;
+      const offsetText = t.units.seconds(formatDecimal(locale, offset, 2));
 
       drawTapeRings(ctx, size, {
         peaks,
@@ -81,12 +78,13 @@ export function TapeRings({ session, peaks, loop }: Props) {
         posB: positions.b,
         loop,
         offsetText,
+        caption: t.tapeRings.caption,
         discrete: reducedMotion,
         colors,
       });
 
-      const percent = loop > 0 ? percentFormat.format((offset / loop) * 100) : '0';
-      const readout = `${offsetText} (${percent} % del bucle)`;
+      const percent = loop > 0 ? formatDecimal(locale, (offset / loop) * 100, 0) : '0';
+      const readout = t.tapeRings.ofLoop(offsetText, percent);
       if (readout !== lastOffset && offsetRef.current) {
         offsetRef.current.textContent = readout;
         lastOffset = readout;
@@ -103,7 +101,7 @@ export function TapeRings({ session, peaks, loop }: Props) {
       observer.disconnect();
       scheme.removeEventListener('change', onSchemeChange);
     };
-  }, [session, peaks, loop, reducedMotion]);
+  }, [session, peaks, loop, reducedMotion, t, locale]);
 
   return (
     <figure className={styles.figure}>
@@ -111,14 +109,14 @@ export function TapeRings({ session, peaks, loop }: Props) {
         ref={canvasRef}
         className={styles.canvas}
         role="img"
-        aria-label="Dos anillos con la forma de onda de la grabación: la copia A por fuera y la B por dentro, cada una con su cabezal de reproducción."
+        aria-label={t.tapeRings.label}
       />
       <figcaption className={styles.readout}>
         <span>
-          Desfase: <span ref={offsetRef} className={styles.number} />
+          {t.phaseRings.offset} <span ref={offsetRef} className={styles.number} />
         </span>
         <span>
-          Vueltas completas: <span ref={lapsRef} className={styles.number} />
+          {t.phaseRings.laps} <span ref={lapsRef} className={styles.number} />
         </span>
       </figcaption>
     </figure>

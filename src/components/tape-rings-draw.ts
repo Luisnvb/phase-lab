@@ -10,6 +10,8 @@ export type TapeFrame = {
   /** Loop length in seconds. */
   loop: number;
   offsetText: string;
+  /** Under the offset, e.g. "of offset". */
+  caption: string;
   /** Reduced motion: playheads jump in twelfths of a turn instead of turning. */
   discrete: boolean;
   colors: RingColors;
@@ -110,5 +112,5 @@ export function drawTapeRings(ctx: CanvasRenderingContext2D, size: number, frame
   ctx.fillText(frame.offsetText, center, center + size / 40);
   ctx.fillStyle = colors.muted;
   ctx.font = `${Math.round(size / 28)}px system-ui, sans-serif`;
-  ctx.fillText('de desfase', center, center + size / 40 + size / 18);
+  ctx.fillText(frame.caption, center, center + size / 40 + size / 18);
 }
